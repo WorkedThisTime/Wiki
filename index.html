@@ -319,7 +319,15 @@
             .card { aspect-ratio: 16/9; }
         }
 
-        /* ── FANER / TABS ──────────────────────────────────────────── */
+        /* ── FANE-BYGGER (editor modal) ───────────────────────────── */
+        .tb-step { border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: var(--bg); }
+        .tb-step-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .tb-step-header input { flex: 1; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-main); font-size: 13px; font-weight: 600; font-family: inherit; }
+        .tb-step-header button { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 4px 8px; border-radius: 6px; }
+        .tb-step-header button:hover { color: var(--danger); background: rgba(218,54,51,0.1); }
+        .tb-step textarea { width: 100%; min-height: 90px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-main); font-family: inherit; font-size: 13px; resize: vertical; }
+
+
         .wiki-tabs { margin: 24px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
         .wiki-tab-bar { display: flex; background: var(--header-bg); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
         .wiki-tab-bar::-webkit-scrollbar { display: none; }
@@ -602,6 +610,19 @@
 </div>
 
 <!-- MOVE MODAL -->
+<div class="modal-overlay" id="tabbuilder-modal-overlay" onclick="closeTabBuilder()">
+    <div class="modal" id="tabbuilder-modal" onclick="event.stopPropagation()" style="max-width:680px; width:92%;">
+        <div class="move-modal-title">🗂️ Faner / Steg</div>
+        <div class="move-modal-subtitle">Lag steg med navn og innhold. Trykk "Sett inn i artikkel" når du er ferdig.</div>
+        <div id="tabbuilder-list" style="display:flex; flex-direction:column; gap:14px; max-height:50vh; overflow-y:auto; margin:16px 0; padding-right:4px;"></div>
+        <button class="btn btn-outline" style="width:100%; justify-content:center;" onclick="tabBuilderAddStep()">+ Legg til steg</button>
+        <div style="display:flex; gap:10px; margin-top:18px; justify-content:flex-end;">
+            <button class="btn btn-outline" onclick="closeTabBuilder()">Avbryt</button>
+            <button class="btn btn-primary" onclick="tabBuilderInsert()">Sett inn i artikkel ✓</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="move-modal-overlay" onclick="closeMoveModal()">
     <div class="modal" id="move-modal" onclick="event.stopPropagation()">
         <div class="move-modal-title">📦 Flytt element</div>
@@ -695,7 +716,7 @@
             <div class="split-container">
                 <div class="split-pane edit-pane" id="edit-pane" style="display:none;">
                     <div class="editor-toolbar">
-                        <label style="cursor:pointer;" class="toolbar-btn">
+                        <label style="cursor:pointer;" class="toolbar-btn" onmousedown="rememberCursor()">
                             🖼️ Last opp bilde
                             <input type="file" id="image-file-input" style="display:none;" accept="image/*" multiple onchange="handleImageFiles(this.files)">
                         </label>
@@ -830,10 +851,72 @@
         return { html: html, blocks: blocks };
     }
 
+    var tabBuilderSteps = [];
+    var tabBuilderCounter = 0;
+
     function insertTabTemplate(){
-        var template = '\n:::faner\n--- Steg 1\nInnhold for steg 1 her...\n\n--- Steg 2\nInnhold for steg 2 her...\n\n--- Steg 3\nInnhold for steg 3 her...\n:::\n';
-        insertTextAtCursor(document.getElementById('text-edit-area'), template);
-        showToast('🗂️ Fanemal satt inn', 'info');
+        rememberCursor();
+        tabBuilderSteps = [
+            { id: tabBuilderCounter++, title: 'Steg 1', content: '' },
+            { id: tabBuilderCounter++, title: 'Steg 2', content: '' }
+        ];
+        renderTabBuilder();
+        document.getElementById('tabbuilder-modal-overlay').style.display = 'flex';
+    }
+
+    function closeTabBuilder(){
+        document.getElementById('tabbuilder-modal-overlay').style.display = 'none';
+    }
+
+    function renderTabBuilder(){
+        var list = document.getElementById('tabbuilder-list');
+        list.innerHTML = '';
+        tabBuilderSteps.forEach(function(step, i){
+            var el = document.createElement('div');
+            el.className = 'tb-step';
+            var header = document.createElement('div');
+            header.className = 'tb-step-header';
+            var nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.value = step.title;
+            nameInput.placeholder = 'Navn på steg';
+            nameInput.oninput = function(){ step.title = this.value; };
+            header.appendChild(nameInput);
+            if(tabBuilderSteps.length > 1){
+                var delBtn = document.createElement('button');
+                delBtn.innerHTML = '✕';
+                delBtn.title = 'Fjern steg';
+                delBtn.onclick = function(){ tabBuilderSteps = tabBuilderSteps.filter(function(s){return s.id !== step.id;}); renderTabBuilder(); };
+                header.appendChild(delBtn);
+            }
+            el.appendChild(header);
+            var contentArea = document.createElement('textarea');
+            contentArea.placeholder = 'Skriv innholdet for dette steget her...';
+            contentArea.value = step.content;
+            contentArea.oninput = function(){ step.content = this.value; };
+            el.appendChild(contentArea);
+            list.appendChild(el);
+        });
+    }
+
+    function tabBuilderAddStep(){
+        tabBuilderSteps.push({ id: tabBuilderCounter++, title: 'Steg ' + (tabBuilderSteps.length + 1), content: '' });
+        renderTabBuilder();
+    }
+
+    function tabBuilderInsert(){
+        if(tabBuilderSteps.length === 0){ showToast('❌ Legg til minst ett steg', 'error'); return; }
+        var md = '\n:::faner\n';
+        tabBuilderSteps.forEach(function(step){
+            var title = (step.title || 'Steg').trim();
+            var content = (step.content || '').trim();
+            md += '--- ' + title + '\n' + content + '\n\n';
+        });
+        md += ':::\n';
+        var textarea = document.getElementById('text-edit-area');
+        insertTextAtCursor(textarea, md);
+        closeTabBuilder();
+        showToast('🗂️ Faner satt inn', 'success');
     }
 
     function wikiSwitchTab(tabsId, idx) {
@@ -1058,7 +1141,22 @@
         }
     }
 
-    function insertTextAtCursor(textarea,text){ var s=textarea.selectionStart,e=textarea.selectionEnd; textarea.value=textarea.value.substring(0,s)+text+textarea.value.substring(e); textarea.selectionStart=textarea.selectionEnd=s+text.length; textarea.dispatchEvent(new Event('input')); }
+    var lastCursorPos = null;
+    function rememberCursor(){
+        var ta = document.getElementById('text-edit-area');
+        if(ta) lastCursorPos = { start: ta.selectionStart, end: ta.selectionEnd };
+    }
+    function insertTextAtCursor(textarea,text){
+        var s = (lastCursorPos ? lastCursorPos.start : textarea.selectionStart);
+        var e = (lastCursorPos ? lastCursorPos.end : textarea.selectionEnd);
+        if (typeof s !== 'number' || s < 0 || s > textarea.value.length) { s = textarea.value.length; e = s; }
+        textarea.value = textarea.value.substring(0,s) + text + textarea.value.substring(e);
+        var newPos = s + text.length;
+        textarea.selectionStart = textarea.selectionEnd = newPos;
+        lastCursorPos = { start: newPos, end: newPos };
+        textarea.focus();
+        textarea.dispatchEvent(new Event('input'));
+    }
 
     async function insertImageFromFilePicker(){
         var textarea = document.getElementById('text-edit-area');
@@ -1089,6 +1187,9 @@
 
     function setupImageHandlers(){
         var textarea=document.getElementById('text-edit-area'); if(!textarea||textarea._imgHandlersSet) return; textarea._imgHandlersSet=true;
+        textarea.addEventListener('click', rememberCursor);
+        textarea.addEventListener('keyup', rememberCursor);
+        textarea.addEventListener('select', rememberCursor);
         textarea.addEventListener('paste',async function(e){ var items=e.clipboardData?.items; if(!items) return; var imgs=Array.from(items).filter(function(i){return i.type.startsWith('image/');}); if(!imgs.length) return; e.preventDefault(); for(var item of imgs){ var file=item.getAsFile(); if(!file) continue; var url=await uploadImageFile(file); if(url){insertTextAtCursor(textarea,'\n![Bilde]('+url+')\n');showToast('✅ Bilde limt inn','success');} } });
         textarea.addEventListener('dragover',function(e){ if(Array.from(e.dataTransfer.items||[]).some(function(i){return i.type.startsWith('image/');})){e.preventDefault();textarea.classList.add('drag-active');} });
         textarea.addEventListener('dragleave',function(){textarea.classList.remove('drag-active');});
