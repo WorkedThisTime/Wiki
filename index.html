@@ -319,13 +319,16 @@
             .card { aspect-ratio: 16/9; }
         }
 
-        /* ── FANE-BYGGER (editor modal) ───────────────────────────── */
-        .tb-step { border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: var(--bg); }
-        .tb-step-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-        .tb-step-header input { flex: 1; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-main); font-size: 13px; font-weight: 600; font-family: inherit; }
-        .tb-step-header button { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 4px 8px; border-radius: 6px; }
-        .tb-step-header button:hover { color: var(--danger); background: rgba(218,54,51,0.1); }
-        .tb-step textarea { width: 100%; min-height: 90px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-main); font-family: inherit; font-size: 13px; resize: vertical; }
+        /* ── INLINE FANE-STRIPE I EDITOR ─────────────────────────── */
+        #inline-tab-bar::-webkit-scrollbar { height: 4px; }
+        .inline-tab-btn { padding: 6px 14px; font-size: 12px; font-weight: 600; background: transparent; border: none; border-radius: 6px; color: var(--text-muted); cursor: pointer; white-space: nowrap; font-family: inherit; transition: 0.15s; }
+        .inline-tab-btn:hover { background: rgba(255,255,255,0.06); color: var(--text-main); }
+        .inline-tab-btn.active { background: var(--blue); color: #fff; }
+        .inline-tab-add-btn { padding: 6px 10px; font-size: 14px; font-weight: 700; background: transparent; border: 1px dashed var(--border); border-radius: 6px; color: var(--text-muted); cursor: pointer; flex-shrink: 0; }
+        .inline-tab-add-btn:hover { color: var(--blue); border-color: var(--blue); }
+        .inline-tab-del-btn { padding: 2px 6px; font-size: 11px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; margin-left: 4px; border-radius: 4px; }
+        .inline-tab-del-btn:hover { color: var(--danger); background: rgba(218,54,51,0.1); }
+        body.has-inline-tabs #text-edit-area { border-radius: 0 0 var(--radius) var(--radius); border-top: none; }
 
 
         .wiki-tabs { margin: 24px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
@@ -610,19 +613,6 @@
 </div>
 
 <!-- MOVE MODAL -->
-<div class="modal-overlay" id="tabbuilder-modal-overlay" onclick="closeTabBuilder()">
-    <div class="modal" id="tabbuilder-modal" onclick="event.stopPropagation()" style="max-width:680px; width:92%;">
-        <div class="move-modal-title">🗂️ Faner / Steg</div>
-        <div class="move-modal-subtitle">Lag steg med navn og innhold. Trykk "Sett inn i artikkel" når du er ferdig.</div>
-        <div id="tabbuilder-list" style="display:flex; flex-direction:column; gap:14px; max-height:50vh; overflow-y:auto; margin:16px 0; padding-right:4px;"></div>
-        <button class="btn btn-outline" style="width:100%; justify-content:center;" onclick="tabBuilderAddStep()">+ Legg til steg</button>
-        <div style="display:flex; gap:10px; margin-top:18px; justify-content:flex-end;">
-            <button class="btn btn-outline" onclick="closeTabBuilder()">Avbryt</button>
-            <button class="btn btn-primary" onclick="tabBuilderInsert()">Sett inn i artikkel ✓</button>
-        </div>
-    </div>
-</div>
-
 <div class="modal-overlay" id="move-modal-overlay" onclick="closeMoveModal()">
     <div class="modal" id="move-modal" onclick="event.stopPropagation()">
         <div class="move-modal-title">📦 Flytt element</div>
@@ -720,12 +710,13 @@
                             🖼️ Last opp bilde
                             <input type="file" id="image-file-input" style="display:none;" accept="image/*" multiple onchange="handleImageFiles(this.files)">
                         </label>
-                        <button class="toolbar-btn" onclick="insertTabTemplate()">🗂️ Sett inn faner</button>
+                        <button class="toolbar-btn" onclick="insertTabBlock()">🗂️ Sett inn faner</button>
                         <div class="upload-progress" id="upload-progress">
                             <div class="spinner"></div>
                             <span id="upload-progress-text">Laster opp...</span>
                         </div>
                     </div>
+                    <div id="inline-tab-bar" style="display:none; align-items:center; gap:4px; padding:6px 8px; background:var(--card-bg); border:1px solid var(--border); border-bottom:none; border-radius:8px 8px 0 0; overflow-x:auto;"></div>
                     <textarea id="text-edit-area" placeholder="Skriv din vitenskapsartikkel her..." oninput="triggerAutosave()" maxlength="100000"></textarea>
                     <div style="padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
                         <span id="save-status-indicator" style="font-size:11px; color:var(--text-muted);">Autolagring er på...</span>
@@ -851,72 +842,149 @@
         return { html: html, blocks: blocks };
     }
 
-    var tabBuilderSteps = [];
-    var tabBuilderCounter = 0;
+    // ── INLINE FANE-STRIPE I EDITOR ───────────────────────────────
+    var activeInlineTabBlock = null; // {blockStart, blockEnd, steps:[{title,contentStart,contentEnd}], activeIdx}
 
-    function insertTabTemplate(){
-        rememberCursor();
-        tabBuilderSteps = [
-            { id: tabBuilderCounter++, title: 'Steg 1', content: '' },
-            { id: tabBuilderCounter++, title: 'Steg 2', content: '' }
-        ];
-        renderTabBuilder();
-        document.getElementById('tabbuilder-modal-overlay').style.display = 'flex';
-    }
-
-    function closeTabBuilder(){
-        document.getElementById('tabbuilder-modal-overlay').style.display = 'none';
-    }
-
-    function renderTabBuilder(){
-        var list = document.getElementById('tabbuilder-list');
-        list.innerHTML = '';
-        tabBuilderSteps.forEach(function(step, i){
-            var el = document.createElement('div');
-            el.className = 'tb-step';
-            var header = document.createElement('div');
-            header.className = 'tb-step-header';
-            var nameInput = document.createElement('input');
-            nameInput.type = 'text';
-            nameInput.value = step.title;
-            nameInput.placeholder = 'Navn på steg';
-            nameInput.oninput = function(){ step.title = this.value; };
-            header.appendChild(nameInput);
-            if(tabBuilderSteps.length > 1){
-                var delBtn = document.createElement('button');
-                delBtn.innerHTML = '✕';
-                delBtn.title = 'Fjern steg';
-                delBtn.onclick = function(){ tabBuilderSteps = tabBuilderSteps.filter(function(s){return s.id !== step.id;}); renderTabBuilder(); };
-                header.appendChild(delBtn);
-            }
-            el.appendChild(header);
-            var contentArea = document.createElement('textarea');
-            contentArea.placeholder = 'Skriv innholdet for dette steget her...';
-            contentArea.value = step.content;
-            contentArea.oninput = function(){ step.content = this.value; };
-            el.appendChild(contentArea);
-            list.appendChild(el);
-        });
-    }
-
-    function tabBuilderAddStep(){
-        tabBuilderSteps.push({ id: tabBuilderCounter++, title: 'Steg ' + (tabBuilderSteps.length + 1), content: '' });
-        renderTabBuilder();
-    }
-
-    function tabBuilderInsert(){
-        if(tabBuilderSteps.length === 0){ showToast('❌ Legg til minst ett steg', 'error'); return; }
-        var md = '\n:::faner\n';
-        tabBuilderSteps.forEach(function(step){
-            var title = (step.title || 'Steg').trim();
-            var content = (step.content || '').trim();
-            md += '--- ' + title + '\n' + content + '\n\n';
-        });
-        md += ':::\n';
+    function insertTabBlock(){
         var textarea = document.getElementById('text-edit-area');
-        insertTextAtCursor(textarea, md);
-        closeTabBuilder();
-        showToast('🗂️ Faner satt inn', 'success');
+        rememberCursor();
+        var pos = (lastCursorPos ? lastCursorPos.start : textarea.value.length);
+        var template = '\n:::faner\n--- Steg 1\n\n--- Steg 2\n\n:::\n';
+        var before = textarea.value.substring(0, pos);
+        var after = textarea.value.substring(pos);
+        textarea.value = before + template + after;
+        textarea.dispatchEvent(new Event('input'));
+        // Plasser markøren inni "Steg 1"-innholdet
+        var newPos = pos + template.indexOf('--- Steg 1\n') + '--- Steg 1\n'.length;
+        textarea.selectionStart = textarea.selectionEnd = newPos;
+        lastCursorPos = { start: newPos, end: newPos };
+        textarea.focus();
+        updateInlineTabBar();
+    }
+
+    function parseTabBlocks(text){
+        var blocks = [];
+        var re = /:::faner\s*\n([\s\S]*?):::/g;
+        var m;
+        while((m = re.exec(text)) !== null){
+            var blockStart = m.index;
+            var blockEnd = m.index + m[0].length;
+            var inner = m[1];
+            var innerOffset = m.index + m[0].indexOf(inner);
+            var lines = inner.split('\n');
+            var charPos = innerOffset;
+            var stepBoundaries = [];
+            lines.forEach(function(line){
+                var stepMatch = line.match(/^---[ \t]*(.*)$/);
+                if(stepMatch){
+                    stepBoundaries.push({ title: stepMatch[1].trim() || 'Steg', lineStart: charPos, headerLen: line.length + 1 });
+                }
+                charPos += line.length + 1;
+            });
+            var steps = [];
+            for(var j = 0; j < stepBoundaries.length; j++){
+                var cs = stepBoundaries[j].lineStart + stepBoundaries[j].headerLen;
+                var ce = (j + 1 < stepBoundaries.length) ? stepBoundaries[j+1].lineStart : innerOffset + inner.length;
+                steps.push({ title: stepBoundaries[j].title, contentStart: cs, contentEnd: ce });
+            }
+            blocks.push({ blockStart: blockStart, blockEnd: blockEnd, steps: steps });
+        }
+        return blocks;
+    }
+
+    function findActiveBlock(){
+        var textarea = document.getElementById('text-edit-area');
+        if(!textarea) return null;
+        var pos = textarea.selectionStart;
+        var blocks = parseTabBlocks(textarea.value);
+        for(var b of blocks){
+            if(pos >= b.blockStart && pos <= b.blockEnd) return b;
+        }
+        return null;
+    }
+
+    function updateInlineTabBar(){
+        var bar = document.getElementById('inline-tab-bar');
+        var textarea = document.getElementById('text-edit-area');
+        if(!bar || !textarea) return;
+        var block = findActiveBlock();
+        if(!block || block.steps.length === 0){
+            bar.style.display = 'none';
+            document.body.classList.remove('has-inline-tabs');
+            activeInlineTabBlock = null;
+            return;
+        }
+        activeInlineTabBlock = block;
+        var pos = textarea.selectionStart;
+        var activeIdx = 0;
+        for(var i = 0; i < block.steps.length; i++){
+            if(pos >= block.steps[i].contentStart && pos <= block.steps[i].contentEnd){ activeIdx = i; break; }
+            if(pos >= block.steps[i].contentStart) activeIdx = i;
+        }
+        bar.innerHTML = '';
+        bar.style.display = 'flex';
+        document.body.classList.add('has-inline-tabs');
+        block.steps.forEach(function(step, i){
+            var btn = document.createElement('button');
+            btn.className = 'inline-tab-btn' + (i === activeIdx ? ' active' : '');
+            btn.textContent = step.title || ('Steg ' + (i+1));
+            btn.onclick = function(){
+                textarea.focus();
+                var jumpPos = step.contentStart;
+                textarea.selectionStart = textarea.selectionEnd = jumpPos;
+                lastCursorPos = { start: jumpPos, end: jumpPos };
+                updateInlineTabBar();
+            };
+            if(block.steps.length > 1){
+                var del = document.createElement('span');
+                del.className = 'inline-tab-del-btn';
+                del.textContent = '✕';
+                del.onclick = function(e){
+                    e.stopPropagation();
+                    removeInlineTabStep(block, i);
+                };
+                btn.appendChild(del);
+            }
+            bar.appendChild(btn);
+        });
+        var addBtn = document.createElement('button');
+        addBtn.className = 'inline-tab-add-btn';
+        addBtn.textContent = '+';
+        addBtn.title = 'Legg til steg';
+        addBtn.onclick = function(){ addInlineTabStep(block); };
+        bar.appendChild(addBtn);
+    }
+
+    function addInlineTabStep(block){
+        var textarea = document.getElementById('text-edit-area');
+        var stepNum = block.steps.length + 1;
+        var insertion = '--- Steg ' + stepNum + '\n\n';
+        var insertPos = block.blockEnd - 3; // rett før avsluttende ":::"
+        var before = textarea.value.substring(0, insertPos);
+        var after = textarea.value.substring(insertPos);
+        textarea.value = before + insertion + after;
+        textarea.dispatchEvent(new Event('input'));
+        var newPos = insertPos + insertion.indexOf('\n\n') + 1;
+        textarea.selectionStart = textarea.selectionEnd = newPos;
+        lastCursorPos = { start: newPos, end: newPos };
+        textarea.focus();
+        updateInlineTabBar();
+    }
+
+    function removeInlineTabStep(block, idx){
+        var textarea = document.getElementById('text-edit-area');
+        var step = block.steps[idx];
+        // Finn linjestart for "---" header (gå bakover fra contentStart til linjestart med ---)
+        var text = textarea.value;
+        var headerStart = text.lastIndexOf('---', step.contentStart);
+        var removeStart = headerStart;
+        var removeEnd = step.contentEnd;
+        textarea.value = text.substring(0, removeStart) + text.substring(removeEnd);
+        textarea.dispatchEvent(new Event('input'));
+        var newPos = removeStart;
+        textarea.selectionStart = textarea.selectionEnd = newPos;
+        lastCursorPos = { start: newPos, end: newPos };
+        updateInlineTabBar();
     }
 
     function wikiSwitchTab(tabsId, idx) {
@@ -1187,8 +1255,8 @@
 
     function setupImageHandlers(){
         var textarea=document.getElementById('text-edit-area'); if(!textarea||textarea._imgHandlersSet) return; textarea._imgHandlersSet=true;
-        textarea.addEventListener('click', rememberCursor);
-        textarea.addEventListener('keyup', rememberCursor);
+        textarea.addEventListener('click', function(){ rememberCursor(); updateInlineTabBar(); });
+        textarea.addEventListener('keyup', function(){ rememberCursor(); updateInlineTabBar(); });
         textarea.addEventListener('select', rememberCursor);
         textarea.addEventListener('paste',async function(e){ var items=e.clipboardData?.items; if(!items) return; var imgs=Array.from(items).filter(function(i){return i.type.startsWith('image/');}); if(!imgs.length) return; e.preventDefault(); for(var item of imgs){ var file=item.getAsFile(); if(!file) continue; var url=await uploadImageFile(file); if(url){insertTextAtCursor(textarea,'\n![Bilde]('+url+')\n');showToast('✅ Bilde limt inn','success');} } });
         textarea.addEventListener('dragover',function(e){ if(Array.from(e.dataTransfer.items||[]).some(function(i){return i.type.startsWith('image/');})){e.preventDefault();textarea.classList.add('drag-active');} });
@@ -1448,6 +1516,7 @@
             renderAnimSlots(getAnimCodes(file));
             document.getElementById('edit-toggle-btn').innerHTML="Lukk Redigering";
             setupImageHandlers();
+            updateInlineTabBar();
         } else {
             document.getElementById('edit-pane').style.display="none";
             document.getElementById('edit-toggle-btn').innerHTML="🖋️ Rediger Split-View";
