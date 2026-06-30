@@ -319,16 +319,40 @@
             .card { aspect-ratio: 16/9; }
         }
 
-        /* ── INLINE FANE-STRIPE I EDITOR ─────────────────────────── */
-        #inline-tab-bar::-webkit-scrollbar { height: 4px; }
-        .inline-tab-btn { padding: 6px 14px; font-size: 12px; font-weight: 600; background: transparent; border: none; border-radius: 6px; color: var(--text-muted); cursor: pointer; white-space: nowrap; font-family: inherit; transition: 0.15s; }
-        .inline-tab-btn:hover { background: rgba(255,255,255,0.06); color: var(--text-main); }
-        .inline-tab-btn.active { background: var(--blue); color: #fff; }
-        .inline-tab-add-btn { padding: 6px 10px; font-size: 14px; font-weight: 700; background: transparent; border: 1px dashed var(--border); border-radius: 6px; color: var(--text-muted); cursor: pointer; flex-shrink: 0; }
-        .inline-tab-add-btn:hover { color: var(--blue); border-color: var(--blue); }
-        .inline-tab-del-btn { padding: 2px 6px; font-size: 11px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; margin-left: 4px; border-radius: 4px; }
-        .inline-tab-del-btn:hover { color: var(--danger); background: rgba(218,54,51,0.1); }
-        body.has-inline-tabs #text-edit-area { border-radius: 0 0 var(--radius) var(--radius); border-top: none; }
+        /* ── RIK EDITOR MED EKTE FANE-BOKSER ────────────────────────── */
+        #rich-editor-container { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; overflow-y: auto; padding-bottom: 10px; }
+        .re-text-segment {
+            width: 100%; min-height: 60px; background: transparent; color: var(--text-main);
+            border: 1px solid var(--border); padding: 16px; font-family: 'Fira Code', monospace;
+            font-size: 14px; border-radius: var(--radius); resize: none; line-height: 1.6;
+            overflow: hidden;
+        }
+        .re-text-segment:focus { border-color: var(--blue); }
+        .re-tabblock { border: 1px solid rgba(88,166,255,0.4); border-radius: 10px; overflow: hidden; background: rgba(88,166,255,0.04); }
+        .re-tabblock-bar { display: flex; align-items: center; gap: 4px; padding: 8px 10px; background: rgba(88,166,255,0.08); border-bottom: 1px solid rgba(88,166,255,0.3); overflow-x: auto; }
+        .re-tabblock-bar::-webkit-scrollbar { height: 4px; }
+        .re-tab-title-input {
+            padding: 6px 12px; font-size: 12px; font-weight: 700; background: transparent;
+            border: none; border-radius: 6px; color: var(--text-muted); cursor: pointer;
+            white-space: nowrap; font-family: inherit; width: 90px; text-align: center;
+        }
+        .re-tab-title-input.active { background: var(--blue); color: #fff; }
+        .re-tab-title-input:focus { outline: 2px solid var(--blue); background: var(--card-bg); color: var(--text-main); cursor: text; width: 130px; }
+        .re-tab-del-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 4px 6px; border-radius: 4px; flex-shrink: 0; }
+        .re-tab-del-btn:hover { color: var(--danger); background: rgba(218,54,51,0.12); }
+        .re-tab-add-btn { padding: 6px 12px; font-size: 15px; font-weight: 700; background: transparent; border: 1px dashed var(--border); border-radius: 6px; color: var(--text-muted); cursor: pointer; flex-shrink: 0; }
+        .re-tab-add-btn:hover { color: var(--blue); border-color: var(--blue); }
+        .re-tab-content-wrap { display: none; padding: 14px; }
+        .re-tab-content-wrap.active { display: block; }
+        .re-tab-content-area {
+            width: 100%; min-height: 100px; background: var(--bg); color: var(--text-main);
+            border: 1px solid var(--border); padding: 12px; font-family: 'Fira Code', monospace;
+            font-size: 13px; border-radius: 8px; resize: vertical; line-height: 1.6;
+        }
+        .re-tab-content-area:focus { border-color: var(--blue); }
+        .re-block-toolbar { display: flex; justify-content: flex-end; padding: 4px 8px; background: rgba(88,166,255,0.06); }
+        .re-block-del { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+        .re-block-del:hover { color: var(--danger); }
 
 
         .wiki-tabs { margin: 24px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
@@ -716,8 +740,8 @@
                             <span id="upload-progress-text">Laster opp...</span>
                         </div>
                     </div>
-                    <div id="inline-tab-bar" style="display:none; align-items:center; gap:4px; padding:6px 8px; background:var(--card-bg); border:1px solid var(--border); border-bottom:none; border-radius:8px 8px 0 0; overflow-x:auto;"></div>
-                    <textarea id="text-edit-area" placeholder="Skriv din vitenskapsartikkel her..." oninput="triggerAutosave()" maxlength="100000"></textarea>
+                    <div id="rich-editor-container"></div>
+                    <textarea id="text-edit-area" style="display:none;" maxlength="100000"></textarea>
                     <div style="padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
                         <span id="save-status-indicator" style="font-size:11px; color:var(--text-muted);">Autolagring er på...</span>
                         <button class="btn btn-primary" onclick="toggleEdit()">Lukk Editoren</button>
@@ -842,149 +866,242 @@
         return { html: html, blocks: blocks };
     }
 
-    // ── INLINE FANE-STRIPE I EDITOR ───────────────────────────────
-    var activeInlineTabBlock = null; // {blockStart, blockEnd, steps:[{title,contentStart,contentEnd}], activeIdx}
+    // ── RIK EDITOR MED EKTE FANE-BOKSER ───────────────────────────────
+    // Modell: array av segmenter. Hvert segment er enten {type:'text', value} eller {type:'tabs', steps:[{title,content}]}
+    var richSegments = [];
 
-    function insertTabBlock(){
-        var textarea = document.getElementById('text-edit-area');
-        rememberCursor();
-        var pos = (lastCursorPos ? lastCursorPos.start : textarea.value.length);
-        var template = '\n:::faner\n--- Steg 1\n\n--- Steg 2\n\n:::\n';
-        var before = textarea.value.substring(0, pos);
-        var after = textarea.value.substring(pos);
-        textarea.value = before + template + after;
-        textarea.dispatchEvent(new Event('input'));
-        // Plasser markøren inni "Steg 1"-innholdet
-        var newPos = pos + template.indexOf('--- Steg 1\n') + '--- Steg 1\n'.length;
-        textarea.selectionStart = textarea.selectionEnd = newPos;
-        lastCursorPos = { start: newPos, end: newPos };
-        textarea.focus();
-        updateInlineTabBar();
-    }
-
-    function parseTabBlocks(text){
-        var blocks = [];
-        var re = /:::faner\s*\n([\s\S]*?):::/g;
+    function parseToSegments(text){
+        var segments = [];
+        var re = /:::faner\s*\n([\s\S]*?):::\n?/g;
+        var lastIndex = 0;
         var m;
         while((m = re.exec(text)) !== null){
-            var blockStart = m.index;
-            var blockEnd = m.index + m[0].length;
+            if(m.index > lastIndex){
+                segments.push({ type:'text', value: text.substring(lastIndex, m.index) });
+            }
             var inner = m[1];
-            var innerOffset = m.index + m[0].indexOf(inner);
             var lines = inner.split('\n');
-            var charPos = innerOffset;
-            var stepBoundaries = [];
-            lines.forEach(function(line){
-                var stepMatch = line.match(/^---[ \t]*(.*)$/);
-                if(stepMatch){
-                    stepBoundaries.push({ title: stepMatch[1].trim() || 'Steg', lineStart: charPos, headerLen: line.length + 1 });
-                }
-                charPos += line.length + 1;
-            });
             var steps = [];
-            for(var j = 0; j < stepBoundaries.length; j++){
-                var cs = stepBoundaries[j].lineStart + stepBoundaries[j].headerLen;
-                var ce = (j + 1 < stepBoundaries.length) ? stepBoundaries[j+1].lineStart : innerOffset + inner.length;
-                steps.push({ title: stepBoundaries[j].title, contentStart: cs, contentEnd: ce });
-            }
-            blocks.push({ blockStart: blockStart, blockEnd: blockEnd, steps: steps });
+            var curTitle = null, curLines = [];
+            lines.forEach(function(line){
+                var sm = line.match(/^---[ \t]*(.*)$/);
+                if(sm){
+                    if(curTitle !== null) steps.push({ title: curTitle, content: curLines.join('\n').replace(/\n+$/,'') });
+                    curTitle = sm[1].trim() || 'Steg';
+                    curLines = [];
+                } else if(curTitle !== null){
+                    curLines.push(line);
+                }
+            });
+            if(curTitle !== null) steps.push({ title: curTitle, content: curLines.join('\n').replace(/\n+$/,'') });
+            if(steps.length === 0) steps.push({ title:'Steg 1', content:'' });
+            segments.push({ type:'tabs', steps: steps });
+            lastIndex = re.lastIndex;
         }
-        return blocks;
+        if(lastIndex < text.length){
+            segments.push({ type:'text', value: text.substring(lastIndex) });
+        }
+        if(segments.length === 0) segments.push({ type:'text', value:'' });
+        return segments;
     }
 
-    function findActiveBlock(){
-        var textarea = document.getElementById('text-edit-area');
-        if(!textarea) return null;
-        var pos = textarea.selectionStart;
-        var blocks = parseTabBlocks(textarea.value);
-        for(var b of blocks){
-            if(pos >= b.blockStart && pos <= b.blockEnd) return b;
-        }
-        return null;
+    function segmentsToText(segments){
+        return segments.map(function(seg){
+            if(seg.type === 'text') return seg.value;
+            var md = ':::faner\n';
+            seg.steps.forEach(function(step){
+                md += '--- ' + (step.title || 'Steg').trim() + '\n' + (step.content || '').trim() + '\n\n';
+            });
+            md += ':::\n';
+            return md;
+        }).join('');
     }
 
-    function updateInlineTabBar(){
-        var bar = document.getElementById('inline-tab-bar');
-        var textarea = document.getElementById('text-edit-area');
-        if(!bar || !textarea) return;
-        var block = findActiveBlock();
-        if(!block || block.steps.length === 0){
-            bar.style.display = 'none';
-            document.body.classList.remove('has-inline-tabs');
-            activeInlineTabBlock = null;
-            return;
-        }
-        activeInlineTabBlock = block;
-        var pos = textarea.selectionStart;
-        var activeIdx = 0;
-        for(var i = 0; i < block.steps.length; i++){
-            if(pos >= block.steps[i].contentStart && pos <= block.steps[i].contentEnd){ activeIdx = i; break; }
-            if(pos >= block.steps[i].contentStart) activeIdx = i;
-        }
-        bar.innerHTML = '';
-        bar.style.display = 'flex';
-        document.body.classList.add('has-inline-tabs');
-        block.steps.forEach(function(step, i){
-            var btn = document.createElement('button');
-            btn.className = 'inline-tab-btn' + (i === activeIdx ? ' active' : '');
-            btn.textContent = step.title || ('Steg ' + (i+1));
-            btn.onclick = function(){
-                textarea.focus();
-                var jumpPos = step.contentStart;
-                textarea.selectionStart = textarea.selectionEnd = jumpPos;
-                lastCursorPos = { start: jumpPos, end: jumpPos };
-                updateInlineTabBar();
-            };
-            if(block.steps.length > 1){
-                var del = document.createElement('span');
-                del.className = 'inline-tab-del-btn';
-                del.textContent = '✕';
-                del.onclick = function(e){
-                    e.stopPropagation();
-                    removeInlineTabStep(block, i);
+    function syncHiddenTextarea(){
+        var hidden = document.getElementById('text-edit-area');
+        if(!hidden) return;
+        hidden.value = segmentsToText(richSegments);
+        triggerAutosave();
+    }
+
+    function autoGrow(el){
+        el.style.height = 'auto';
+        el.style.height = (el.scrollHeight + 4) + 'px';
+    }
+
+    function renderRichEditor(){
+        var container = document.getElementById('rich-editor-container');
+        if(!container) return;
+        container.innerHTML = '';
+        richSegments.forEach(function(seg, segIdx){
+            if(seg.type === 'text'){
+                var ta = document.createElement('textarea');
+                ta.className = 're-text-segment';
+                ta.value = seg.value;
+                ta.placeholder = segIdx === 0 ? 'Skriv din vitenskapsartikkel her...' : '';
+                ta.oninput = function(){
+                    seg.value = this.value;
+                    autoGrow(this);
+                    syncHiddenTextarea();
                 };
-                btn.appendChild(del);
+                ta.onfocus = function(){
+                    lastFocusedTextarea = this;
+                    lastFocusedTextSegment = seg;
+                };
+                container.appendChild(ta);
+                setTimeout(function(){ autoGrow(ta); }, 0);
+            } else {
+                var block = document.createElement('div');
+                block.className = 're-tabblock';
+
+                var toolbar = document.createElement('div');
+                toolbar.className = 're-block-toolbar';
+                var delBlockBtn = document.createElement('button');
+                delBlockBtn.className = 're-block-del';
+                delBlockBtn.textContent = '✕ Fjern fanene';
+                delBlockBtn.onclick = function(){
+                    richSegments.splice(segIdx, 1);
+                    mergeAdjacentTextSegments();
+                    renderRichEditor();
+                    syncHiddenTextarea();
+                };
+                toolbar.appendChild(delBlockBtn);
+                block.appendChild(toolbar);
+
+                var bar = document.createElement('div');
+                bar.className = 're-tabblock-bar';
+                var activeIdx = seg._activeIdx || 0;
+
+                var contentWraps = [];
+
+                seg.steps.forEach(function(step, stepIdx){
+                    var titleInput = document.createElement('input');
+                    titleInput.type = 'text';
+                    titleInput.className = 're-tab-title-input' + (stepIdx === activeIdx ? ' active' : '');
+                    titleInput.value = step.title;
+                    titleInput.onclick = function(){
+                        seg._activeIdx = stepIdx;
+                        renderRichEditor();
+                    };
+                    titleInput.oninput = function(){
+                        step.title = this.value;
+                        syncHiddenTextarea();
+                    };
+                    titleInput.onfocus = function(){
+                        seg._activeIdx = stepIdx;
+                        bar.querySelectorAll('.re-tab-title-input').forEach(function(el,i){ el.classList.toggle('active', i===stepIdx); });
+                        contentWraps.forEach(function(w,i){ w.classList.toggle('active', i===stepIdx); });
+                    };
+                    bar.appendChild(titleInput);
+
+                    if(seg.steps.length > 1){
+                        var delBtn = document.createElement('button');
+                        delBtn.className = 're-tab-del-btn';
+                        delBtn.textContent = '✕';
+                        delBtn.title = 'Fjern steg';
+                        delBtn.onclick = function(){
+                            seg.steps.splice(stepIdx, 1);
+                            seg._activeIdx = 0;
+                            renderRichEditor();
+                            syncHiddenTextarea();
+                        };
+                        bar.appendChild(delBtn);
+                    }
+                });
+
+                var addBtn = document.createElement('button');
+                addBtn.className = 're-tab-add-btn';
+                addBtn.textContent = '+';
+                addBtn.title = 'Legg til steg';
+                addBtn.onclick = function(){
+                    seg.steps.push({ title: 'Steg ' + (seg.steps.length + 1), content: '' });
+                    seg._activeIdx = seg.steps.length - 1;
+                    renderRichEditor();
+                    syncHiddenTextarea();
+                };
+                bar.appendChild(addBtn);
+                block.appendChild(bar);
+
+                seg.steps.forEach(function(step, stepIdx){
+                    var wrap = document.createElement('div');
+                    wrap.className = 're-tab-content-wrap' + (stepIdx === activeIdx ? ' active' : '');
+                    var contentArea = document.createElement('textarea');
+                    contentArea.className = 're-tab-content-area';
+                    contentArea.placeholder = 'Skriv innholdet for «' + step.title + '» her...';
+                    contentArea.value = step.content;
+                    contentArea.oninput = function(){
+                        step.content = this.value;
+                        autoGrow(this);
+                        syncHiddenTextarea();
+                    };
+                    contentArea.onfocus = function(){
+                        lastFocusedTextarea = this;
+                        lastFocusedTextSegment = { type:'tabs', _stepRef: step };
+                    };
+                    wrap.appendChild(contentArea);
+                    contentWraps.push(wrap);
+                    block.appendChild(wrap);
+                    setTimeout(function(){ autoGrow(contentArea); }, 0);
+                });
+
+                container.appendChild(block);
+
+                // Legg til en tekst-textarea etter hver tabblock for å kunne fortsette å skrive
+                if(segIdx === richSegments.length - 1 || richSegments[segIdx+1].type !== 'text'){
+                    // Sett inn et tomt tekstsegment rett etter hvis det ikke finnes et
+                }
             }
-            bar.appendChild(btn);
         });
-        var addBtn = document.createElement('button');
-        addBtn.className = 'inline-tab-add-btn';
-        addBtn.textContent = '+';
-        addBtn.title = 'Legg til steg';
-        addBtn.onclick = function(){ addInlineTabStep(block); };
-        bar.appendChild(addBtn);
     }
 
-    function addInlineTabStep(block){
-        var textarea = document.getElementById('text-edit-area');
-        var stepNum = block.steps.length + 1;
-        var insertion = '--- Steg ' + stepNum + '\n\n';
-        var insertPos = block.blockEnd - 3; // rett før avsluttende ":::"
-        var before = textarea.value.substring(0, insertPos);
-        var after = textarea.value.substring(insertPos);
-        textarea.value = before + insertion + after;
-        textarea.dispatchEvent(new Event('input'));
-        var newPos = insertPos + insertion.indexOf('\n\n') + 1;
-        textarea.selectionStart = textarea.selectionEnd = newPos;
-        lastCursorPos = { start: newPos, end: newPos };
-        textarea.focus();
-        updateInlineTabBar();
+    function mergeAdjacentTextSegments(){
+        var merged = [];
+        richSegments.forEach(function(seg){
+            if(seg.type === 'text' && merged.length && merged[merged.length-1].type === 'text'){
+                merged[merged.length-1].value += seg.value;
+            } else {
+                merged.push(seg);
+            }
+        });
+        if(merged.length === 0) merged.push({ type:'text', value:'' });
+        richSegments = merged;
     }
 
-    function removeInlineTabStep(block, idx){
-        var textarea = document.getElementById('text-edit-area');
-        var step = block.steps[idx];
-        // Finn linjestart for "---" header (gå bakover fra contentStart til linjestart med ---)
-        var text = textarea.value;
-        var headerStart = text.lastIndexOf('---', step.contentStart);
-        var removeStart = headerStart;
-        var removeEnd = step.contentEnd;
-        textarea.value = text.substring(0, removeStart) + text.substring(removeEnd);
-        textarea.dispatchEvent(new Event('input'));
-        var newPos = removeStart;
-        textarea.selectionStart = textarea.selectionEnd = newPos;
-        lastCursorPos = { start: newPos, end: newPos };
-        updateInlineTabBar();
+    function loadRichEditor(content){
+        richSegments = parseToSegments(content || '');
+        renderRichEditor();
+    }
+
+    function insertTabBlock(){
+        var newTabSeg = { type:'tabs', steps:[{title:'Steg 1',content:''},{title:'Steg 2',content:''}], _activeIdx:0 };
+
+        if(lastFocusedTextarea && lastFocusedTextSegment && lastFocusedTextSegment.type === 'text' &&
+           document.body.contains(lastFocusedTextarea)){
+            var segIdx = richSegments.indexOf(lastFocusedTextSegment);
+            if(segIdx !== -1){
+                var pos = lastFocusedTextarea.selectionStart != null ? lastFocusedTextarea.selectionStart : lastFocusedTextarea.value.length;
+                var fullVal = lastFocusedTextarea.value;
+                var before = fullVal.substring(0, pos);
+                var after = fullVal.substring(pos);
+                richSegments.splice(segIdx, 1, { type:'text', value: before }, newTabSeg, { type:'text', value: after });
+                renderRichEditor();
+                syncHiddenTextarea();
+                showToast('🗂️ Faner satt inn', 'success');
+                return;
+            }
+        }
+
+        // Fallback: legg til på slutten
+        var lastSeg = richSegments[richSegments.length - 1];
+        if(!lastSeg || lastSeg.type === 'text'){
+            richSegments.push(newTabSeg);
+        } else {
+            richSegments.push(newTabSeg);
+        }
+        richSegments.push({ type:'text', value:'' });
+        renderRichEditor();
+        syncHiddenTextarea();
+        showToast('🗂️ Faner satt inn', 'success');
     }
 
     function wikiSwitchTab(tabsId, idx) {
@@ -1210,29 +1327,48 @@
     }
 
     var lastCursorPos = null;
+    var lastFocusedTextSegment = null; // referanse til segment-objekt
+    var lastFocusedTextarea = null; // DOM-element
+
     function rememberCursor(){
-        var ta = document.getElementById('text-edit-area');
-        if(ta) lastCursorPos = { start: ta.selectionStart, end: ta.selectionEnd };
+        // beholdt for bakoverkompatibilitet, men styres nå via segment-fokus
     }
-    function insertTextAtCursor(textarea,text){
-        var s = (lastCursorPos ? lastCursorPos.start : textarea.selectionStart);
-        var e = (lastCursorPos ? lastCursorPos.end : textarea.selectionEnd);
-        if (typeof s !== 'number' || s < 0 || s > textarea.value.length) { s = textarea.value.length; e = s; }
-        textarea.value = textarea.value.substring(0,s) + text + textarea.value.substring(e);
-        var newPos = s + text.length;
-        textarea.selectionStart = textarea.selectionEnd = newPos;
-        lastCursorPos = { start: newPos, end: newPos };
-        textarea.focus();
-        textarea.dispatchEvent(new Event('input'));
+
+    function insertImageMarkdownAtFocus(markdown){
+        if(lastFocusedTextarea && lastFocusedTextSegment && document.body.contains(lastFocusedTextarea)){
+            var ta = lastFocusedTextarea;
+            var pos = ta.selectionStart != null ? ta.selectionStart : ta.value.length;
+            var before = ta.value.substring(0, pos);
+            var after = ta.value.substring(pos);
+            ta.value = before + markdown + after;
+            var newPos = pos + markdown.length;
+            ta.selectionStart = ta.selectionEnd = newPos;
+            // Oppdater riktig data-modell
+            if(lastFocusedTextSegment.type === 'text'){
+                lastFocusedTextSegment.value = ta.value;
+            } else if(lastFocusedTextSegment._stepRef){
+                lastFocusedTextSegment._stepRef.content = ta.value;
+            }
+            ta.focus();
+            autoGrow(ta);
+            syncHiddenTextarea();
+        } else {
+            // Fallback: legg til på slutten av siste tekstsegment
+            var lastSeg = richSegments[richSegments.length - 1];
+            if(!lastSeg || lastSeg.type !== 'text'){
+                lastSeg = { type:'text', value:'' };
+                richSegments.push(lastSeg);
+            }
+            lastSeg.value += markdown;
+            renderRichEditor();
+            syncHiddenTextarea();
+        }
     }
 
     async function insertImageFromFilePicker(){
-        var textarea = document.getElementById('text-edit-area');
-        if(!textarea) return;
-        
-        var url = await uploadImageFile(null); // null = trigger file picker
+        var url = await uploadImageFile(null);
         if(url){
-            insertTextAtCursor(textarea, '\n![Bilde]('+url+')\n');
+            insertImageMarkdownAtFocus('\n![Bilde]('+url+')\n');
             showToast('✅ Bilde satt inn i tekst','success');
         }
     }
@@ -1240,12 +1376,10 @@
     async function handleImageFiles(files){
         var editPane = document.getElementById('edit-pane');
         if(editPane && editPane.style.display === 'none') toggleEdit();
-        var textarea = document.getElementById('text-edit-area');
-        if(!textarea){ showToast('❌ Åpne en artikkel først', 'error'); return; }
         for(var f of Array.from(files)){
             var url = await uploadImageFile(f);
             if(url){
-                insertTextAtCursor(textarea, '\n![' + f.name.replace(/\.[^.]+$/, '') + '](' + url + ')\n');
+                insertImageMarkdownAtFocus('\n![' + f.name.replace(/\.[^.]+$/, '') + '](' + url + ')\n');
                 showToast('✅ Bilde lastet opp', 'success');
             }
         }
@@ -1254,14 +1388,39 @@
     }
 
     function setupImageHandlers(){
-        var textarea=document.getElementById('text-edit-area'); if(!textarea||textarea._imgHandlersSet) return; textarea._imgHandlersSet=true;
-        textarea.addEventListener('click', function(){ rememberCursor(); updateInlineTabBar(); });
-        textarea.addEventListener('keyup', function(){ rememberCursor(); updateInlineTabBar(); });
-        textarea.addEventListener('select', rememberCursor);
-        textarea.addEventListener('paste',async function(e){ var items=e.clipboardData?.items; if(!items) return; var imgs=Array.from(items).filter(function(i){return i.type.startsWith('image/');}); if(!imgs.length) return; e.preventDefault(); for(var item of imgs){ var file=item.getAsFile(); if(!file) continue; var url=await uploadImageFile(file); if(url){insertTextAtCursor(textarea,'\n![Bilde]('+url+')\n');showToast('✅ Bilde limt inn','success');} } });
-        textarea.addEventListener('dragover',function(e){ if(Array.from(e.dataTransfer.items||[]).some(function(i){return i.type.startsWith('image/');})){e.preventDefault();textarea.classList.add('drag-active');} });
-        textarea.addEventListener('dragleave',function(){textarea.classList.remove('drag-active');});
-        textarea.addEventListener('drop',async function(e){ textarea.classList.remove('drag-active'); var files=Array.from(e.dataTransfer.files).filter(function(f){return f.type.startsWith('image/');}); if(!files.length) return; e.preventDefault(); await handleImageFiles(files); });
+        // Globale paste/drop-håndterere på editor-containeren (delegert)
+        var container = document.getElementById('rich-editor-container');
+        if(!container || container._imgHandlersSet) return;
+        container._imgHandlersSet = true;
+        container.addEventListener('focusin', function(e){
+            if(e.target.tagName === 'TEXTAREA'){
+                lastFocusedTextarea = e.target;
+            }
+        });
+        container.addEventListener('paste', async function(e){
+            var items = e.clipboardData && e.clipboardData.items;
+            if(!items) return;
+            var imgs = Array.from(items).filter(function(i){ return i.type.startsWith('image/'); });
+            if(!imgs.length) return;
+            e.preventDefault();
+            for(var item of imgs){
+                var file = item.getAsFile();
+                if(!file) continue;
+                var url = await uploadImageFile(file);
+                if(url){ insertImageMarkdownAtFocus('\n![Bilde]('+url+')\n'); showToast('✅ Bilde limt inn','success'); }
+            }
+        });
+        container.addEventListener('dragover', function(e){
+            if(Array.from(e.dataTransfer.items||[]).some(function(i){return i.type.startsWith('image/');})){
+                e.preventDefault();
+            }
+        });
+        container.addEventListener('drop', async function(e){
+            var files = Array.from(e.dataTransfer.files).filter(function(f){return f.type.startsWith('image/');});
+            if(!files.length) return;
+            e.preventDefault();
+            await handleImageFiles(files);
+        });
     }
 
     // ── p5 ANIMATION SLOTS ───────────────────────────────────────────
@@ -1508,15 +1667,15 @@
             var aliasEl=document.getElementById('alias-input');
             if(aliasEl) aliasEl.value=validateString(file.aliases||"",CONFIG.MAX_ALIAS_LENGTH);
             var ta = document.getElementById('text-edit-area');
-            // Bare sett innhold hvis textarea er tom (unngå å overskrive mens brukeren skriver)
-            if(ta && (ta.value === '' || !ta.dataset.loaded)){
+            // Bare last innhold hvis editoren ikke allerede er lastet for denne filen
+            if(ta && !ta.dataset.loaded){
                 ta.value = validateString(file.content||"", CONFIG.MAX_CONTENT_LENGTH);
                 ta.dataset.loaded = '1';
+                loadRichEditor(ta.value);
             }
             renderAnimSlots(getAnimCodes(file));
             document.getElementById('edit-toggle-btn').innerHTML="Lukk Redigering";
             setupImageHandlers();
-            updateInlineTabBar();
         } else {
             document.getElementById('edit-pane').style.display="none";
             document.getElementById('edit-toggle-btn').innerHTML="🖋️ Rediger Split-View";
