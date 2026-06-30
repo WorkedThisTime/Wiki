@@ -612,7 +612,6 @@
     <div id="header-left-btns" style="display:flex; align-items:center; gap:15px;">
         <button class="btn btn-outline" onclick="goHome()">🏠 Hjem</button>
         <button class="btn btn-outline" onclick="toggleSidebar()">🗂️ Utforsker</button>
-        <button class="icon-btn" onclick="toggleTheme()">🌗</button>
         <button class="icon-btn" onclick="openModal()">⚙️</button>
     </div>
     <button id="view-toggle-btn" class="icon-btn" onclick="toggleViewMode()" title="Bytt mellom PC og mobil visning">🖥️</button>
@@ -2439,7 +2438,7 @@
 
     function initializeApp(){
         checkKaTeXReady();
-        if(localStorage.getItem('theme')==='light') document.body.classList.add('light-theme');
+        // Tema er låst til mørk modus
         if(localStorage.getItem('viewMode')==='mobile'){
             document.body.classList.add('force-mobile');
             var btn = document.getElementById('view-toggle-btn');
