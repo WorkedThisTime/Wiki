@@ -699,19 +699,6 @@
                         </div>
                     </div>
                     <textarea id="text-edit-area" placeholder="Skriv din vitenskapsartikkel her..." oninput="triggerAutosave()" maxlength="100000"></textarea>
-                    <div class="meta-input-group" style="margin-top:8px;">
-                        <div class="collapsible-header" onclick="toggleEditorSection('p5-content', this)">
-                            <label>🎨 p5.js Animasjoner</label>
-                            <span class="toggle-icon" style="transform:rotate(-90deg);">▼</span>
-                        </div>
-                        <div id="p5-content" class="collapsible-content closed">
-                            <div style="font-size:11px; color:var(--text-muted); margin-bottom:10px; padding:8px; background:rgba(88,166,255,0.05); border-radius:6px; border:1px solid rgba(88,166,255,0.2);">
-                                💡 Bruk <code style="font-family:'Fira Code'; color:var(--blue);">[anim:1]</code> i teksten for å plassere animasjoner.
-                            </div>
-                            <div id="anim-slots-list"></div>
-                            <button class="btn btn-outline" style="width:100%; justify-content:center; margin-top:8px;" onclick="addAnimSlot()">+ Legg til animasjon</button>
-                        </div>
-                    </div>
                     <div style="padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
                         <span id="save-status-indicator" style="font-size:11px; color:var(--text-muted);">Autolagring er på...</span>
                         <button class="btn btn-primary" onclick="toggleEdit()">Lukk Editoren</button>
@@ -1133,7 +1120,7 @@
 
     // ── p5 ANIMATION SLOTS ───────────────────────────────────────────
     function getAnimCodes(file){ if(Array.isArray(file.animationCodes)) return file.animationCodes; if(file.animationCode&&file.animationCode.trim()) return [file.animationCode]; return []; }
-    function renderAnimSlots(codes){ var list=document.getElementById('anim-slots-list'); list.innerHTML=''; var arr=codes.length>0?codes:[''];
+    function renderAnimSlots(codes){ var list=document.getElementById('anim-slots-list'); if(!list) return; list.innerHTML=''; var arr=codes.length>0?codes:[''];
         arr.forEach(function(code,i){ var slot=document.createElement('div'); slot.className='anim-slot-editor'; slot.innerHTML='<div class="anim-slot-header"><span class="anim-slot-label">🎨 Animasjon '+(i+1)+'</span><div style="display:flex;gap:6px;align-items:center;"><span class="anim-slot-hint">[anim:'+(i+1)+']</span>'+(arr.length>1?'<button class="icon-btn danger" style="font-size:11px;padding:4px 7px;" onclick="removeAnimSlot('+i+')">✕</button>':'')+'</div></div><textarea class="anim-slot-textarea" data-slot="'+i+'" oninput="triggerAutosave()">'+sanitizeTextareaValue(code)+'</textarea>'; list.appendChild(slot); });
     }
     function sanitizeTextareaValue(str){ return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
