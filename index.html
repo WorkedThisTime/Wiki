@@ -376,8 +376,16 @@
             #btn-delete-article { display: none !important; }
         }
         body.force-mobile .split-container { flex-direction: column; }
-        body.force-mobile .split-pane.edit-pane { max-height: 45vh; border-right: none; border-bottom: 1px solid var(--border); }
+        body.force-mobile .split-pane.edit-pane { max-height: none; height: 100%; border-right: none; border-bottom: none; }
         body.force-mobile .split-pane { padding: 16px; }
+        body.force-mobile #preview-pane { display: none !important; }
+
+        @media (max-width: 768px) {
+            .split-container { flex-direction: column; }
+            .split-pane.edit-pane { max-height: none; height: 100%; border-right: none; border-bottom: none; }
+            .split-pane { padding: 16px; }
+            #preview-pane { display: none !important; }
+        }
         body.force-mobile #text-display { font-size: 15px; line-height: 1.7; }
         body.force-mobile .modal { padding: 18px 14px; margin: 8px; max-height: 92vh; overflow-y: auto; border-radius: 10px; }
         body.force-mobile #quickview-panel { width: 100vw; right: -100vw; padding: 20px 16px; }
@@ -1019,65 +1027,35 @@
         return null;
     }
 
-    async function compressImage(file) {
-        return new Promise(function(resolve) {
-            var maxW = 1920, maxH = 1920, quality = 0.82;
-            var img = new Image();
-            var url = URL.createObjectURL(file);
-            img.onload = function() {
-                URL.revokeObjectURL(url);
-                var w = img.width, h = img.height;
-                if (w <= maxW && h <= maxH && file.size < 500*1024) {
-                    resolve(file); // allerede liten nok
-                    return;
-                }
-                var scale = Math.min(maxW/w, maxH/h, 1);
-                var canvas = document.createElement('canvas');
-                canvas.width = Math.round(w * scale);
-                canvas.height = Math.round(h * scale);
-                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                canvas.toBlob(function(blob) {
-                    resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
-                }, 'image/jpeg', quality);
-            };
-            img.onerror = function() { resolve(file); };
-            img.src = url;
-        });
-    }
-
     async function uploadImageFile(file){
         if(!file) return null;
-        if(!storage){ showToast('❌ Firebase Storage ikke tilgjengelig','error'); return null; }
         if(!file.type.startsWith('image/')){ showToast('❌ Kun bildefiler støttes','error'); return null; }
         if(file.size > 20*1024*1024){ showToast('❌ Bildet er for stort (maks 20MB)','error'); return null; }
         setUploadProgress(true, 'Komprimerer ' + file.name + '...');
-        var compressed = await compressImage(file);
-        var savings = file.size > compressed.size ? ' (' + Math.round((1 - compressed.size/file.size)*100) + '% mindre)' : '';
-        var ext = compressed.name.split('.').pop() || 'jpg';
-        var ref = storage.ref('wiki-images/' + Date.now() + '-' + Math.random().toString(36).substr(2,6) + '.' + ext);
-        setUploadProgress(true, 'Laster opp' + savings + '...');
         try {
-            var uploadTask = ref.put(compressed);
-            var timeoutId = setTimeout(function(){
-                uploadTask.cancel();
-                setUploadProgress(false);
-                showToast('❌ Tidsavbrudd — sjekk at Firebase Storage er aktivert i Firebase Console', 'error');
-            }, 30000);
-            await uploadTask;
-            clearTimeout(timeoutId);
-            var url = await ref.getDownloadURL();
+            var result = await compressImage(file, 1200, 1200, 0.80);
+            var savings = result.savedPct > 0 ? ' (' + result.savedPct + '% mindre)' : '';
+            setUploadProgress(true, 'Lagrer' + savings + '...');
+            var imgId = 'img-' + Date.now() + '-' + Math.random().toString(36).substr(2,6);
+            await firebase.database().ref('wiki-images/' + imgId).set(result.dataUrl);
             setUploadProgress(false);
-            return url;
+            showToast('✅ Bilde lagret!', 'success');
+            return 'db:' + imgId;
         } catch(e) {
             setUploadProgress(false);
-            if(e.code === 'storage/unauthorized') {
-                showToast('❌ Ingen tilgang — gå til Firebase Console → Storage → Rules og tillat innloggede brukere', 'error');
-            } else if(e.code === 'storage/canceled') {
-                showToast('❌ Opplasting avbrutt (tidsavbrudd)', 'error');
-            } else {
-                showToast('❌ ' + (e.message || e.code || 'Ukjent feil'), 'error');
-            }
+            showToast('❌ ' + (e.message || 'Ukjent feil'), 'error');
             return null;
+        }
+    }
+
+    async function resolveDbImages(container){
+        var imgs = container.querySelectorAll('img[src^="db:"]');
+        for(var img of imgs){
+            var imgId = img.getAttribute('src').replace('db:','');
+            try {
+                var snap = await firebase.database().ref('wiki-images/' + imgId).once('value');
+                if(snap.val()) img.src = snap.val();
+            } catch(e) { img.alt = 'Kunne ikke laste bilde'; }
         }
     }
 
@@ -1158,33 +1136,63 @@
     function compressImage(file, maxW, maxH, quality) {
         maxW = maxW || 800; maxH = maxH || 600; quality = quality || 0.72;
         var originalSize = file.size;
-        return new Promise(function(resolve) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var img = new Image();
-                img.onload = function() {
-                    var w = img.width, h = img.height;
-                    var scale = Math.min(maxW / w, maxH / h, 1);
-                    var tw = Math.round(w * scale), th = Math.round(h * scale);
-                    var canvas = document.createElement('canvas');
-                    canvas.width = tw; canvas.height = th;
-                    var ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, tw, th);
-                    var dataUrl = canvas.toDataURL('image/jpeg', quality);
-                    // base64 -> approximate byte size
-                    var compressedSize = Math.round((dataUrl.length - 'data:image/jpeg;base64,'.length) * 3 / 4);
-                    var savedPct = Math.round((1 - compressedSize / originalSize) * 100);
-                    resolve({
-                        dataUrl: dataUrl,
-                        originalSize: originalSize,
-                        compressedSize: compressedSize,
-                        savedPct: savedPct,
-                        origW: w, origH: h, newW: tw, newH: th
-                    });
-                };
-                img.src = e.target.result;
+
+        function fromBitmap(bitmap){
+            var w = bitmap.width, h = bitmap.height;
+            var scale = Math.min(maxW / w, maxH / h, 1);
+            var tw = Math.round(w * scale), th = Math.round(h * scale);
+            var canvas = document.createElement('canvas');
+            canvas.width = tw; canvas.height = th;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(bitmap, 0, 0, tw, th);
+            var dataUrl = canvas.toDataURL('image/jpeg', quality);
+            var compressedSize = Math.round((dataUrl.length - 'data:image/jpeg;base64,'.length) * 3 / 4);
+            var savedPct = Math.round((1 - compressedSize / originalSize) * 100);
+            return { dataUrl: dataUrl, originalSize: originalSize, compressedSize: compressedSize, savedPct: savedPct, origW: w, origH: h, newW: tw, newH: th };
+        }
+
+        // Rask metode: createImageBitmap (mye raskere på mobil, unngår store base64-strenger)
+        if (window.createImageBitmap) {
+            return createImageBitmap(file).then(function(bitmap){
+                var result = fromBitmap(bitmap);
+                bitmap.close && bitmap.close();
+                return result;
+            }).catch(function(){
+                return compressImageFallback(file, maxW, maxH, quality, originalSize);
+            });
+        }
+        return compressImageFallback(file, maxW, maxH, quality, originalSize);
+    }
+
+    function compressImageFallback(file, maxW, maxH, quality, originalSize){
+        return new Promise(function(resolve, reject){
+            var img = new Image();
+            var objUrl = URL.createObjectURL(file);
+            var timeoutId = setTimeout(function(){
+                URL.revokeObjectURL(objUrl);
+                reject(new Error('Tidsavbrudd ved bildelasting'));
+            }, 15000);
+            img.onload = function(){
+                clearTimeout(timeoutId);
+                URL.revokeObjectURL(objUrl);
+                var w = img.width, h = img.height;
+                var scale = Math.min(maxW / w, maxH / h, 1);
+                var tw = Math.round(w * scale), th = Math.round(h * scale);
+                var canvas = document.createElement('canvas');
+                canvas.width = tw; canvas.height = th;
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, tw, th);
+                var dataUrl = canvas.toDataURL('image/jpeg', quality);
+                var compressedSize = Math.round((dataUrl.length - 'data:image/jpeg;base64,'.length) * 3 / 4);
+                var savedPct = Math.round((1 - compressedSize / originalSize) * 100);
+                resolve({ dataUrl: dataUrl, originalSize: originalSize, compressedSize: compressedSize, savedPct: savedPct, origW: w, origH: h, newW: tw, newH: th });
             };
-            reader.readAsDataURL(file);
+            img.onerror = function(){
+                clearTimeout(timeoutId);
+                URL.revokeObjectURL(objUrl);
+                reject(new Error('Kunne ikke laste bildet'));
+            };
+            img.src = objUrl;
         });
     }
     function validateString(str,max){ max=max||1000; return typeof str!=='string'?'':str.substring(0,max).trim(); }
@@ -1368,6 +1376,7 @@
         var html = injectWikiLinks(result.html, file.id);
         display.innerHTML = html;
         executeBlocks(display, result.blocks);
+        resolveDbImages(display);
         setTimeout(function(){
             if(window.renderMathInElement&&katexReady) renderMathInElement(display,KATEX_CONFIG);
             if(window.Prism) Prism.highlightAllUnder(display);
