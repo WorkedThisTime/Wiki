@@ -551,6 +551,11 @@
             </button>
         </div>
 
+        <div id="readmode-toggle-section" class="edit-only" style="margin-bottom:10px;">
+            <button id="readmode-btn" class="btn btn-outline" style="width:100%;justify-content:center;gap:10px;" onclick="toggleReadMode()">
+                <span>👁️</span> Bytt til lesemodus
+            </button>
+        </div>
         <button class="btn btn-outline" style="width:100%;justify-content:center;" onclick="closeModal()">Lukk</button>
     </div>
 </div>
@@ -2888,19 +2893,33 @@
         applyRoleUI();
     }
 
+    var readModeActive = false;
+
+    function toggleReadMode(){
+        if(!canUserEdit()) return;
+        readModeActive = !readModeActive;
+        applyRoleUI();
+        var btn = document.getElementById('readmode-btn');
+        if(btn) btn.innerHTML = readModeActive ? '<span>✏️</span> Bytt til redigeringsmodus' : '<span>👁️</span> Bytt til lesemodus';
+        showToast(readModeActive ? '👁️ Lesemodus aktivert' : '✏️ Redigeringsmodus aktivert', 'success');
+        closeModal();
+    }
+
     function canUserEdit(){
         return currentRole === 'admin' || currentRole === 'editor';
     }
 
     function applyRoleUI(){
-        var canEdit = (currentRole === 'admin' || currentRole === 'editor');
-        // Skjul alle rediger-knapper for viewer
+        var canEdit = (currentRole === 'admin' || currentRole === 'editor') && !readModeActive;
         document.querySelectorAll('.edit-only').forEach(function(el){
             el.style.display = canEdit ? '' : 'none';
         });
-        // Vis admin-knapp kun for admin
+        // Vis admin-knapp kun for admin (alltid synlig uansett lesemodus)
         var adminBtn = document.getElementById('admin-panel-btn');
         if(adminBtn) adminBtn.style.display = (currentRole === 'admin') ? '' : 'none';
+        // Readmode-seksjonen vises alltid for editor/admin
+        var rmSection = document.getElementById('readmode-toggle-section');
+        if(rmSection) rmSection.style.display = (currentRole === 'admin' || currentRole === 'editor') ? '' : 'none';
     }
 
     function showAccessDenied(user){
