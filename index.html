@@ -2154,6 +2154,7 @@
         document.getElementById('qv-title').innerText=sanitizeHTML(item.name);
         var bodyEl=document.getElementById('qv-body');
         try{bodyEl.innerHTML=item.content?marked.parse(item.content):"<em>Ingen innhold</em>";}catch(e){bodyEl.innerHTML='<pre>'+sanitizeHTML(item.content)+'</pre>';}
+        resolveDbImages(bodyEl);
         document.getElementById('qv-full-btn').onclick=function(){navigateToId(id);};
         document.getElementById('quickview-panel').classList.add('open');
         document.getElementById('qv-overlay').style.display="flex"; document.getElementById('qv-overlay').classList.add('active');
