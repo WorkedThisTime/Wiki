@@ -355,7 +355,11 @@
         .re-block-del:hover { color: var(--danger); }
 
         .re-widgetblock { border: 1px solid rgba(163,113,247,0.4); border-radius: 10px; overflow: hidden; background: rgba(163,113,247,0.04); }
-        .re-widgetblock-bar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: rgba(163,113,247,0.1); border-bottom: 1px solid rgba(163,113,247,0.3); font-size: 12px; font-weight: 700; color: #a371f7; }
+        .re-widgetblock-bar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: rgba(163,113,247,0.1); border-bottom: 1px solid rgba(163,113,247,0.3); font-size: 12px; font-weight: 700; color: #a371f7; cursor: pointer; user-select: none; }
+        .re-widgetblock-bar:hover { background: rgba(163,113,247,0.18); }
+        .re-widgetblock-toggle { margin-left: auto; font-size: 13px; transition: transform 0.2s; display: inline-block; }
+        .re-widgetblock.collapsed .re-widgetblock-toggle { transform: rotate(-90deg); }
+        .re-widgetblock.collapsed .re-widget-body { display: none; }
         .re-widgetblock .re-block-toolbar { background: rgba(163,113,247,0.08); }
         .re-widget-content-area {
             background: var(--bg); color: var(--text-main);
@@ -969,26 +973,43 @@
                 setTimeout(function(){ autoGrow(ta); }, 0);
             } else if(seg.type === 'widget'){
                 var wblock = document.createElement('div');
-                wblock.className = 're-widgetblock';
+                wblock.className = 're-widgetblock' + (seg._collapsed ? ' collapsed' : '');
+
+                var wbar = document.createElement('div');
+                wbar.className = 're-widgetblock-bar';
+
+                var wbarLabel = document.createElement('span');
+                wbarLabel.textContent = '🎬 Interaktiv animasjon';
+                wbar.appendChild(wbarLabel);
+
+                var wToggle = document.createElement('span');
+                wToggle.className = 're-widgetblock-toggle';
+                wToggle.textContent = '▾';
+                wbar.appendChild(wToggle);
+
+                wbar.onclick = function(){
+                    seg._collapsed = !seg._collapsed;
+                    wblock.classList.toggle('collapsed', seg._collapsed);
+                };
+                wblock.appendChild(wbar);
+
+                var wbody = document.createElement('div');
+                wbody.className = 're-widget-body';
 
                 var wtoolbar = document.createElement('div');
                 wtoolbar.className = 're-block-toolbar';
                 var wDelBtn = document.createElement('button');
                 wDelBtn.className = 're-block-del';
                 wDelBtn.textContent = '✕ Fjern animasjon';
-                wDelBtn.onclick = function(){
+                wDelBtn.onclick = function(e){
+                    e.stopPropagation();
                     richSegments.splice(segIdx, 1);
                     mergeAdjacentTextSegments();
                     renderRichEditor();
                     syncHiddenTextarea();
                 };
                 wtoolbar.appendChild(wDelBtn);
-                wblock.appendChild(wtoolbar);
-
-                var wbar = document.createElement('div');
-                wbar.className = 're-widgetblock-bar';
-                wbar.textContent = '🎬 Interaktiv animasjon';
-                wblock.appendChild(wbar);
+                wbody.appendChild(wtoolbar);
 
                 var wContentArea = document.createElement('textarea');
                 wContentArea.className = 're-widget-content-area';
@@ -1003,7 +1024,8 @@
                     lastFocusedTextarea = this;
                     lastFocusedTextSegment = { type:'widget', _segRef: seg };
                 };
-                wblock.appendChild(wContentArea);
+                wbody.appendChild(wContentArea);
+                wblock.appendChild(wbody);
                 setTimeout(function(){ autoGrow(wContentArea); }, 0);
 
                 container.appendChild(wblock);
