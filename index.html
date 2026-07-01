@@ -354,6 +354,17 @@
         .re-block-del { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 11px; padding: 2px 8px; border-radius: 4px; }
         .re-block-del:hover { color: var(--danger); }
 
+        .re-widgetblock { border: 1px solid rgba(163,113,247,0.4); border-radius: 10px; overflow: hidden; background: rgba(163,113,247,0.04); }
+        .re-widgetblock-bar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: rgba(163,113,247,0.1); border-bottom: 1px solid rgba(163,113,247,0.3); font-size: 12px; font-weight: 700; color: #a371f7; }
+        .re-widgetblock .re-block-toolbar { background: rgba(163,113,247,0.08); }
+        .re-widget-content-area {
+            background: var(--bg); color: var(--text-main);
+            border: 1px solid var(--border); padding: 12px; font-family: 'Fira Code', monospace;
+            font-size: 13px; border-radius: 8px; resize: vertical; line-height: 1.6; display: block;
+            margin: 14px; width: calc(100% - 28px); min-height: 100px;
+        }
+        .re-widget-content-area:focus { border-color: #a371f7; }
+
 
         .wiki-tabs { margin: 24px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
         .wiki-tab-bar { display: flex; background: var(--header-bg); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
@@ -735,6 +746,7 @@
                             <input type="file" id="image-file-input" style="display:none;" accept="image/*" multiple onchange="handleImageFiles(this.files)">
                         </label>
                         <button class="toolbar-btn" onclick="insertTabBlock()">🗂️ Sett inn faner</button>
+                        <button class="toolbar-btn" onclick="insertWidgetBlock()">🎬 Sett inn animasjon</button>
                         <div class="upload-progress" id="upload-progress">
                             <div class="spinner"></div>
                             <span id="upload-progress-text">Laster opp...</span>
@@ -872,30 +884,34 @@
 
     function parseToSegments(text){
         var segments = [];
-        var re = /:::faner\s*\n([\s\S]*?):::\n?/g;
+        var re = /:::faner\s*\n([\s\S]*?):::\n?|:::widget\s*\n([\s\S]*?):::\n?/g;
         var lastIndex = 0;
         var m;
         while((m = re.exec(text)) !== null){
             if(m.index > lastIndex){
                 segments.push({ type:'text', value: text.substring(lastIndex, m.index) });
             }
-            var inner = m[1];
-            var lines = inner.split('\n');
-            var steps = [];
-            var curTitle = null, curLines = [];
-            lines.forEach(function(line){
-                var sm = line.match(/^---[ \t]*(.*)$/);
-                if(sm){
-                    if(curTitle !== null) steps.push({ title: curTitle, content: curLines.join('\n').replace(/\n+$/,'') });
-                    curTitle = sm[1].trim() || 'Steg';
-                    curLines = [];
-                } else if(curTitle !== null){
-                    curLines.push(line);
-                }
-            });
-            if(curTitle !== null) steps.push({ title: curTitle, content: curLines.join('\n').replace(/\n+$/,'') });
-            if(steps.length === 0) steps.push({ title:'Steg 1', content:'' });
-            segments.push({ type:'tabs', steps: steps });
+            if(m[1] !== undefined){
+                var inner = m[1];
+                var lines = inner.split('\n');
+                var steps = [];
+                var curTitle = null, curLines = [];
+                lines.forEach(function(line){
+                    var sm = line.match(/^---[ \t]*(.*)$/);
+                    if(sm){
+                        if(curTitle !== null) steps.push({ title: curTitle, content: curLines.join('\n').replace(/\n+$/,'') });
+                        curTitle = sm[1].trim() || 'Steg';
+                        curLines = [];
+                    } else if(curTitle !== null){
+                        curLines.push(line);
+                    }
+                });
+                if(curTitle !== null) steps.push({ title: curTitle, content: curLines.join('\n').replace(/\n+$/,'') });
+                if(steps.length === 0) steps.push({ title:'Steg 1', content:'' });
+                segments.push({ type:'tabs', steps: steps });
+            } else {
+                segments.push({ type:'widget', code: (m[2] || '').replace(/\n+$/,'') });
+            }
             lastIndex = re.lastIndex;
         }
         if(lastIndex < text.length){
@@ -908,6 +924,7 @@
     function segmentsToText(segments){
         return segments.map(function(seg){
             if(seg.type === 'text') return seg.value;
+            if(seg.type === 'widget') return ':::widget\n' + (seg.code || '').trim() + '\n:::\n';
             var md = ':::faner\n';
             seg.steps.forEach(function(step){
                 md += '--- ' + (step.title || 'Steg').trim() + '\n' + (step.content || '').trim() + '\n\n';
@@ -950,6 +967,46 @@
                 };
                 container.appendChild(ta);
                 setTimeout(function(){ autoGrow(ta); }, 0);
+            } else if(seg.type === 'widget'){
+                var wblock = document.createElement('div');
+                wblock.className = 're-widgetblock';
+
+                var wtoolbar = document.createElement('div');
+                wtoolbar.className = 're-block-toolbar';
+                var wDelBtn = document.createElement('button');
+                wDelBtn.className = 're-block-del';
+                wDelBtn.textContent = '✕ Fjern animasjon';
+                wDelBtn.onclick = function(){
+                    richSegments.splice(segIdx, 1);
+                    mergeAdjacentTextSegments();
+                    renderRichEditor();
+                    syncHiddenTextarea();
+                };
+                wtoolbar.appendChild(wDelBtn);
+                wblock.appendChild(wtoolbar);
+
+                var wbar = document.createElement('div');
+                wbar.className = 're-widgetblock-bar';
+                wbar.textContent = '🎬 Interaktiv animasjon';
+                wblock.appendChild(wbar);
+
+                var wContentArea = document.createElement('textarea');
+                wContentArea.className = 're-widget-content-area';
+                wContentArea.placeholder = 'Lim inn HTML/CSS/JS-koden for animasjonen her...';
+                wContentArea.value = seg.code;
+                wContentArea.oninput = function(){
+                    seg.code = this.value;
+                    autoGrow(this);
+                    syncHiddenTextarea();
+                };
+                wContentArea.onfocus = function(){
+                    lastFocusedTextarea = this;
+                    lastFocusedTextSegment = { type:'widget', _segRef: seg };
+                };
+                wblock.appendChild(wContentArea);
+                setTimeout(function(){ autoGrow(wContentArea); }, 0);
+
+                container.appendChild(wblock);
             } else {
                 var block = document.createElement('div');
                 block.className = 're-tabblock';
@@ -1102,6 +1159,33 @@
         renderRichEditor();
         syncHiddenTextarea();
         showToast('🗂️ Faner satt inn', 'success');
+    }
+
+    function insertWidgetBlock(){
+        var newWidgetSeg = { type:'widget', code:'' };
+
+        if(lastFocusedTextarea && lastFocusedTextSegment && lastFocusedTextSegment.type === 'text' &&
+           document.body.contains(lastFocusedTextarea)){
+            var segIdx = richSegments.indexOf(lastFocusedTextSegment);
+            if(segIdx !== -1){
+                var pos = lastFocusedTextarea.selectionStart != null ? lastFocusedTextarea.selectionStart : lastFocusedTextarea.value.length;
+                var fullVal = lastFocusedTextarea.value;
+                var before = fullVal.substring(0, pos);
+                var after = fullVal.substring(pos);
+                richSegments.splice(segIdx, 1, { type:'text', value: before }, newWidgetSeg, { type:'text', value: after });
+                renderRichEditor();
+                syncHiddenTextarea();
+                showToast('🎬 Animasjon satt inn', 'success');
+                return;
+            }
+        }
+
+        // Fallback: legg til på slutten
+        richSegments.push(newWidgetSeg);
+        richSegments.push({ type:'text', value:'' });
+        renderRichEditor();
+        syncHiddenTextarea();
+        showToast('🎬 Animasjon satt inn', 'success');
     }
 
     function wikiSwitchTab(tabsId, idx) {
