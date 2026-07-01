@@ -745,7 +745,7 @@
             <div id="quiz-section" style="margin-bottom:30px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                     <h3 style="font-size:15px; color:var(--text-muted); margin:0;">🎯 Quizer i denne mappen</h3>
-                    <button class="btn btn-primary" onclick="openQuizGenerator()" style="font-size:12px; padding:6px 14px;">✨ Lag quiz</button>
+                    <button class="btn btn-primary edit-only" onclick="openQuizGenerator()" style="font-size:12px; padding:6px 14px;">✨ Lag quiz</button>
                 </div>
                 <div id="quiz-list"></div>
             </div>
@@ -2563,7 +2563,7 @@
                 + '</div>'
                 + '<div style="display:flex; gap:8px;">'
                 + '<button class="btn btn-primary" style="font-size:12px; padding:6px 14px;" onclick="playQuiz(' + idx + ')">▶ Spill</button>'
-                + '<button class="icon-btn" onclick="deleteQuiz(event,' + idx + ')" style="padding:6px 10px; font-size:13px;">🗑️</button>'
+                + (canUserEdit() ? '<button class="icon-btn" onclick="deleteQuiz(event,' + idx + ')" style="padding:6px 10px; font-size:13px;">🗑️</button>' : '')
                 + '</div>';
             quizList.appendChild(card);
         });
