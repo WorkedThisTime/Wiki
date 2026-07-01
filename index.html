@@ -2153,8 +2153,13 @@
         var item=findItemById(db,id); if(!item) return;
         document.getElementById('qv-title').innerText=sanitizeHTML(item.name);
         var bodyEl=document.getElementById('qv-body');
-        try{bodyEl.innerHTML=item.content?marked.parse(item.content):"<em>Ingen innhold</em>";}catch(e){bodyEl.innerHTML='<pre>'+sanitizeHTML(item.content)+'</pre>';}
-        resolveDbImages(bodyEl);
+        try{
+            var result = customMarkdown(item.content || '');
+            var html = injectWikiLinks(result.html, item.id);
+            bodyEl.innerHTML = html || '<em>Ingen innhold</em>';
+            executeBlocks(bodyEl, result.blocks);
+            resolveDbImages(bodyEl);
+        }catch(e){bodyEl.innerHTML='<pre>'+sanitizeHTML(item.content)+'</pre>';}
         document.getElementById('qv-full-btn').onclick=function(){navigateToId(id);};
         document.getElementById('quickview-panel').classList.add('open');
         document.getElementById('qv-overlay').style.display="flex"; document.getElementById('qv-overlay').classList.add('active');
