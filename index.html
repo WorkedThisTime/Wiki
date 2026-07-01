@@ -750,7 +750,7 @@
                 <h3 style="font-size:15px; color:var(--text-muted); border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:20px;">Dokumenter</h3>
                 <div id="file-grid" class="grid"></div>
             </div>
-            <div style="margin-top:60px; display:flex; gap:20px;">
+            <div style="margin-top:60px; display:flex; gap:20px;" class="edit-only">
                 <button class="btn btn-outline" onclick="createNew('folder')">📁 Ny Mappe</button>
                 <button class="btn btn-primary" onclick="createNew('file')">📄 Ny Artikkel</button>
             </div>
@@ -763,8 +763,8 @@
                 </div>
                 <div style="display:flex; gap:10px;">
                     <button id="btn-toggle-index" class="btn btn-outline" onclick="toggleIndex()">📚 Vis/Skjul Indeks</button>
-                    <button id="edit-toggle-btn" class="btn btn-primary" onclick="toggleEdit()">🖋️ Rediger Split-View</button>
-                    <button id="btn-delete-article" class="btn btn-danger" onclick="deleteCurrentArticle()">Slett Artikkel</button>
+                    <button id="edit-toggle-btn" class="btn btn-primary edit-only" onclick="toggleEdit()">🖋️ Rediger Split-View</button>
+                    <button id="btn-delete-article" class="btn btn-danger edit-only" onclick="deleteCurrentArticle()">Slett Artikkel</button>
                 </div>
             </div>
             <div class="split-container">
@@ -1767,12 +1767,14 @@
             if(item.type==='folder'){
                 folderCount++; el.className="card";
                 if(item.thumbnail) el.style.backgroundImage = "url('"+item.thumbnail+"')";
-                el.innerHTML='<div class="item-actions"><button class="icon-btn" onclick="renameItem(event,\''+item.id+'\')">✏️</button><button class="icon-btn" onclick="setThumbnail(event,\''+item.id+'\')">🖼️</button><button class="icon-btn" onclick="openMoveModal(event,\''+item.id+'\')" title="Flytt mappe">📦</button><button class="icon-btn" onclick="copyItem(event,\''+item.id+'\')" title="Kopier som JSON">📋</button></div><button class="icon-btn danger item-delete-btn" onclick="deleteItem(event,\''+item.id+'\')">🗑️</button><div class="card-title-bar">'+sanitizeHTML(item.name)+'</div>';
+                var _fe=canUserEdit()?'<div class="item-actions"><button class="icon-btn" onclick="renameItem(event,\''+item.id+'\')">✏️</button><button class="icon-btn" onclick="setThumbnail(event,\''+item.id+'\')">🖼️</button><button class="icon-btn" onclick="openMoveModal(event,\''+item.id+'\')" title="Flytt mappe">📦</button><button class="icon-btn" onclick="copyItem(event,\''+item.id+'\')" title="Kopier som JSON">📋</button></div><button class="icon-btn danger item-delete-btn" onclick="deleteItem(event,\''+item.id+'\')">🗑️</button>':'';
+                el.innerHTML=_fe+'<div class="card-title-bar">'+sanitizeHTML(item.name)+'</div>';
                 el.onclick=function(){currentPath.push(item);render();};
                 fGrid.appendChild(el);
             } else if(item.type==='file'){
                 fileCount++; el.className="file-card";
-                el.innerHTML='<div class="item-actions" style="top:5px;right:5px;"><button class="icon-btn" onclick="renameItem(event,\''+item.id+'\')">✏️</button><button class="icon-btn" onclick="openMoveModal(event,\''+item.id+'\')" title="Flytt artikkel">📦</button><button class="icon-btn" onclick="copyItem(event,\''+item.id+'\')" title="Kopier innhold">📋</button></div><button class="icon-btn danger item-delete-btn" style="top:5px;left:5px;" onclick="deleteItem(event,\''+item.id+'\')">🗑️</button><div style="font-size:14px;font-weight:600;padding-right:30px;margin-top:15px;">📄 '+sanitizeHTML(item.name)+'</div><div class="file-meta"><span>Sist endret:</span><span>'+(item.updatedAt?new Date(item.updatedAt).toLocaleDateString('no-NO'):'Ukjent')+'</span></div>';
+                var _fle=canUserEdit()?'<div class="item-actions" style="top:5px;right:5px;"><button class="icon-btn" onclick="renameItem(event,\''+item.id+'\')">✏️</button><button class="icon-btn" onclick="openMoveModal(event,\''+item.id+'\')" title="Flytt artikkel">📦</button><button class="icon-btn" onclick="copyItem(event,\''+item.id+'\')" title="Kopier innhold">📋</button></div><button class="icon-btn danger item-delete-btn" style="top:5px;left:5px;" onclick="deleteItem(event,\''+item.id+'\')">🗑️</button>':'';
+                el.innerHTML=_fle+'<div style="font-size:14px;font-weight:600;padding-right:30px;margin-top:15px;">📄 '+sanitizeHTML(item.name)+'</div><div class="file-meta"><span>Sist endret:</span><span>'+(item.updatedAt?new Date(item.updatedAt).toLocaleDateString('no-NO'):'Ukjent')+'</span></div>';
                 el.onclick=function(){currentPath.push(item);render();};
                 fileGrid.appendChild(el);
             }
@@ -2880,6 +2882,10 @@
         document.getElementById('access-denied-screen').style.display = 'none';
         // Vis/skjul redigeringsknapper basert på rolle
         applyRoleUI();
+    }
+
+    function canUserEdit(){
+        return currentRole === 'admin' || currentRole === 'editor';
     }
 
     function applyRoleUI(){
