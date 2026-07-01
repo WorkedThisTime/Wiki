@@ -2899,6 +2899,7 @@
         if(!canUserEdit()) return;
         readModeActive = !readModeActive;
         applyRoleUI();
+        render(); // re-render kort så knapper på mapper/filer oppdateres
         var btn = document.getElementById('readmode-btn');
         if(btn) btn.innerHTML = readModeActive ? '<span>✏️</span> Bytt til redigeringsmodus' : '<span>👁️</span> Bytt til lesemodus';
         showToast(readModeActive ? '👁️ Lesemodus aktivert' : '✏️ Redigeringsmodus aktivert', 'success');
