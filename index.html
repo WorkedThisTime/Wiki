@@ -329,6 +329,9 @@
         }
         .re-text-segment:focus { border-color: var(--blue); }
         .re-tabblock { border: 1px solid rgba(88,166,255,0.4); border-radius: 10px; overflow: hidden; background: rgba(88,166,255,0.04); }
+        .re-tabblock-desc { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(88,166,255,0.2); color: var(--text-muted); font-size: 12px; font-family: Inter, sans-serif; padding: 8px 12px; resize: none; outline: none; line-height: 1.5; }
+        .re-tabblock-desc::placeholder { color: rgba(139,148,158,0.5); }
+        .re-tabblock-desc:focus { background: rgba(88,166,255,0.04); color: var(--text-main); }
         .re-tabblock-bar { display: flex; align-items: center; gap: 4px; padding: 8px 10px; background: rgba(88,166,255,0.08); border-bottom: 1px solid rgba(88,166,255,0.3); overflow-x: auto; }
         .re-tabblock-bar::-webkit-scrollbar { height: 4px; }
         .re-tab-title-input {
@@ -937,9 +940,13 @@
                 var lines = inner.split('\n');
                 var steps = [];
                 var curTitle = null, curLines = [];
+                var tabDesc = '';
                 lines.forEach(function(line){
+                    var dm = line.match(/^#desc (.*)$/);
                     var sm = line.match(/^---[ \t]*(.*)$/);
-                    if(sm){
+                    if(dm && curTitle === null){
+                        tabDesc = dm[1].trim();
+                    } else if(sm){
                         if(curTitle !== null) steps.push({ title: curTitle, content: curLines.join('\n').replace(/\n+$/,'') });
                         curTitle = sm[1].trim() || 'Steg';
                         curLines = [];
@@ -949,7 +956,7 @@
                 });
                 if(curTitle !== null) steps.push({ title: curTitle, content: curLines.join('\n').replace(/\n+$/,'') });
                 if(steps.length === 0) steps.push({ title:'Steg 1', content:'' });
-                segments.push({ type:'tabs', steps: steps });
+                segments.push({ type:'tabs', steps: steps, description: tabDesc });
             } else {
                 segments.push({ type:'widget', code: (m[2] || '').replace(/\n+$/,'') });
             }
@@ -967,6 +974,7 @@
             if(seg.type === 'text') return seg.value;
             if(seg.type === 'widget') return ':::widget\n' + (seg.code || '').trim() + '\n:::\n';
             var md = ':::faner\n';
+            if(seg.description && seg.description.trim()) md += '#desc ' + seg.description.trim() + '\n';
             seg.steps.forEach(function(step){
                 md += '--- ' + (step.title || 'Steg').trim() + '\n' + (step.content || '').trim() + '\n\n';
             });
@@ -1083,6 +1091,23 @@
                 };
                 toolbar.appendChild(delBlockBtn);
                 block.appendChild(toolbar);
+
+                var descArea = document.createElement('textarea');
+                descArea.className = 're-tabblock-desc';
+                descArea.rows = 1;
+                descArea.placeholder = 'Kort beskrivelse av hva disse fanene hjelper med...';
+                descArea.value = seg.description || '';
+                descArea.oninput = function(){
+                    seg.description = this.value;
+                    autoGrow(this);
+                    syncHiddenTextarea();
+                };
+                descArea.onfocus = function(){
+                    lastFocusedTextarea = this;
+                    lastFocusedTextSegment = { type:'text', value:'' };
+                };
+                block.appendChild(descArea);
+                setTimeout(function(){ autoGrow(descArea); }, 0);
 
                 var bar = document.createElement('div');
                 bar.className = 're-tabblock-bar';
