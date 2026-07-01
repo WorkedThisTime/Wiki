@@ -2896,7 +2896,7 @@
     var readModeActive = false;
 
     function toggleReadMode(){
-        if(!canUserEdit()) return;
+        if(currentRole !== 'admin' && currentRole !== 'editor') return;
         readModeActive = !readModeActive;
         applyRoleUI();
         render(); // re-render kort så knapper på mapper/filer oppdateres
@@ -2907,7 +2907,7 @@
     }
 
     function canUserEdit(){
-        return currentRole === 'admin' || currentRole === 'editor';
+        return (currentRole === 'admin' || currentRole === 'editor') && !readModeActive;
     }
 
     function applyRoleUI(){
