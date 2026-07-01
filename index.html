@@ -2839,28 +2839,35 @@
                 // Registrer/hent bruker i databasen
                 var uid = user.uid;
                 var dbRef = firebase.database().ref('users/' + uid);
+                // Hvis admin — gi tilgang umiddelbart, ikke vent på database
+                if(user.email === ADMIN_EMAIL){
+                    currentRole = 'admin';
+                    showMainApp();
+                    // Lagre/oppdater admin i databasen i bakgrunnen
+                    dbRef.once('value').then(function(snap){
+                        var data = snap.val();
+                        if(!data) dbRef.set({ email: user.email, name: user.displayName || '', role: 'admin', photo: user.photoURL || '' });
+                        else if(data.role !== 'admin') dbRef.update({ role: 'admin' });
+                    }).catch(function(){});
+                    return;
+                }
+
                 dbRef.once('value').then(function(snap){
                     var data = snap.val();
-                    if(user.email === ADMIN_EMAIL){
-                        // Admin får alltid tilgang
-                        currentRole = 'admin';
-                        if(!data){
-                            dbRef.set({ email: user.email, name: user.displayName || '', role: 'admin', photo: user.photoURL || '' });
-                        } else if(data.role !== 'admin'){
-                            dbRef.update({ role: 'admin' });
-                        }
-                        showMainApp();
-                    } else if(data && (data.role === 'editor' || data.role === 'viewer')){
+                    if(data && (data.role === 'editor' || data.role === 'viewer')){
                         currentRole = data.role;
-                        // Oppdater navn/bilde ved innlogging
                         dbRef.update({ email: user.email, name: user.displayName || '', photo: user.photoURL || '' });
                         showMainApp();
                     } else {
-                        // Ingen tilgang ennå — registrer i databasen for at admin kan gi tilgang
                         currentRole = null;
                         dbRef.set({ email: user.email, name: user.displayName || '', role: 'pending', photo: user.photoURL || '' });
                         showAccessDenied(user);
                     }
+                }).catch(function(err){
+                    console.error('DB feil:', err);
+                    // Fallback: vis ingen tilgang
+                    currentRole = null;
+                    showAccessDenied(user);
                 });
             } else {
                 currentUser = null;
