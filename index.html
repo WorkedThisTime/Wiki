@@ -1022,7 +1022,14 @@
 
     function autoGrow(el){
         el.style.height = 'auto';
-        el.style.height = (el.scrollHeight + 4) + 'px';
+        var h = el.scrollHeight;
+        // Fallback for skjulte elementer: estimer fra innhold
+        if(h <= 4 && el.value){
+            var lines = el.value.split('\n').length;
+            var lineH = parseFloat(getComputedStyle(el).lineHeight) || 22;
+            h = Math.max(lines * lineH + 24, 60);
+        }
+        el.style.height = (h + 4) + 'px';
     }
 
     function renderRichEditor(){
@@ -1155,7 +1162,14 @@
                     titleInput.value = step.title;
                     titleInput.onclick = function(){
                         seg._activeIdx = stepIdx;
-                        renderRichEditor();
+                        bar.querySelectorAll('.re-tab-title-input').forEach(function(el,i){ el.classList.toggle('active', i===stepIdx); });
+                        contentWraps.forEach(function(w,i){
+                            w.classList.toggle('active', i===stepIdx);
+                            if(i===stepIdx){
+                                var ta = w.querySelector('.re-tab-content-area');
+                                if(ta) setTimeout(function(){ autoGrow(ta); ta.focus(); }, 0);
+                            }
+                        });
                     };
                     titleInput.oninput = function(){
                         step.title = this.value;
@@ -1164,7 +1178,13 @@
                     titleInput.onfocus = function(){
                         seg._activeIdx = stepIdx;
                         bar.querySelectorAll('.re-tab-title-input').forEach(function(el,i){ el.classList.toggle('active', i===stepIdx); });
-                        contentWraps.forEach(function(w,i){ w.classList.toggle('active', i===stepIdx); });
+                        contentWraps.forEach(function(w,i){
+                            w.classList.toggle('active', i===stepIdx);
+                            if(i===stepIdx){
+                                var ta = w.querySelector('.re-tab-content-area');
+                                if(ta) setTimeout(function(){ autoGrow(ta); }, 0);
+                            }
+                        });
                     };
                     bar.appendChild(titleInput);
 
@@ -1213,6 +1233,23 @@
                         lastFocusedTextSegment = { type:'tabs', _stepRef: step };
                     };
                     wrap.appendChild(contentArea);
+
+                    // autoGrow for skjulte tekstbokser: midlertidig vis for å måle høyde
+                    setTimeout((function(ta, wr){
+                        return function(){
+                            if(wr.classList.contains('active')){
+                                autoGrow(ta);
+                            } else {
+                                // Midlertidig gjør synlig for å måle scrollHeight
+                                var prevDisplay = wr.style.display;
+                                wr.style.display = 'block';
+                                wr.style.visibility = 'hidden';
+                                autoGrow(ta);
+                                wr.style.display = prevDisplay;
+                                wr.style.visibility = '';
+                            }
+                        };
+                    })(contentArea, wrap), 0);
 
                     // Bildeknappraden per steg
                     var imgBar = document.createElement('div');
