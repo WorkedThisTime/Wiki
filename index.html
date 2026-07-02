@@ -2169,6 +2169,10 @@
         renderRichEditor();
         syncHiddenTextarea();
         updateEditorPage2Buttons(f);
+        var btn1 = document.getElementById('editor-page-btn-1');
+        var btn2 = document.getElementById('editor-page-btn-2');
+        if(btn1) btn1.className = 'btn btn-primary';
+        if(btn2) btn2.className = 'btn btn-outline';
         showToast('🗑️ Side 2 slettet', 'success');
     }
 
