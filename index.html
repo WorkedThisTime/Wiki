@@ -983,8 +983,10 @@
                 if(curTitle !== null) steps.push({ title: curTitle, image: curImage, content: curLines.join('\n').replace(/\n+$/,'') });
                 if(steps.length === 0) steps.push({ title:'Steg 1', content:'' });
                 segments.push({ type:'tabs', steps: steps, description: tabDesc });
+                segments.push({ type:'text', value:'' });
             } else {
                 segments.push({ type:'widget', code: (m[2] || '').replace(/\n+$/,'') });
+                segments.push({ type:'text', value:'' });
             }
             lastIndex = re.lastIndex;
         }
@@ -1102,6 +1104,9 @@
                 setTimeout(function(){ autoGrow(wContentArea); }, 0);
 
                 container.appendChild(wblock);
+                if(segIdx === richSegments.length - 1 || richSegments[segIdx+1].type !== 'text'){
+                    richSegments.splice(segIdx + 1, 0, { type:'text', value:'' });
+                }
             } else {
                 var block = document.createElement('div');
                 block.className = 're-tabblock';
@@ -1277,7 +1282,8 @@
 
                 // Legg til en tekst-textarea etter hver tabblock for å kunne fortsette å skrive
                 if(segIdx === richSegments.length - 1 || richSegments[segIdx+1].type !== 'text'){
-                    // Sett inn et tomt tekstsegment rett etter hvis det ikke finnes et
+                    var emptyTextSeg = { type:'text', value:'' };
+                    richSegments.splice(segIdx + 1, 0, emptyTextSeg);
                 }
             }
         });
