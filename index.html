@@ -2121,10 +2121,10 @@
         } else {
             f.content2 = validateString(document.getElementById('text-edit-area').value, CONFIG.MAX_CONTENT_LENGTH);
         }
+        currentEditorPage = n;
         richSegments = parseToSegments(n === 1 ? (f.content || '') : (f.content2 || ''));
         renderRichEditor();
         syncHiddenTextarea();
-        currentEditorPage = n;
         document.getElementById('editor-page-btn-1').className = n===1 ? 'btn btn-primary' : 'btn btn-outline';
         document.getElementById('editor-page-btn-2').className = n===2 ? 'btn btn-primary' : 'btn btn-outline';
         updateEditorPage2Buttons(f);
@@ -2151,6 +2151,8 @@
     function addPage2(){
         var f = currentPath[currentPath.length-1];
         if(!f || f.type !== 'file') return;
+        // Lagre side 1 før vi bytter
+        f.content = validateString(document.getElementById('text-edit-area').value, CONFIG.MAX_CONTENT_LENGTH);
         f.content2 = '';
         updateEditorPage2Buttons(f);
         switchEditorPage(2);
