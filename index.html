@@ -801,6 +801,12 @@
                             <span id="upload-progress-text">Laster opp...</span>
                         </div>
                     </div>
+                    <div id="editor-page-switcher" style="display:none;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <button id="editor-page-btn-1" class="btn btn-primary" style="font-size:12px;padding:5px 14px;" onclick="switchEditorPage(1)">📄 Side 1</button>
+                        <button id="editor-page-btn-2" class="btn btn-outline" style="font-size:12px;padding:5px 14px;" onclick="switchEditorPage(2)">🔬 Side 2 – Avansert</button>
+                        <button id="editor-add-page2-btn" class="btn btn-outline" style="font-size:12px;padding:5px 14px;display:none;" onclick="addPage2()">➕ Legg til side 2</button>
+                        <button id="editor-del-page2-btn" class="btn btn-danger" style="font-size:12px;padding:5px 14px;display:none;" onclick="deletePage2()">🗑️ Slett side 2</button>
+                    </div>
                     <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:10px;">
                         <input id="title-input" type="text" placeholder="Tittel på dokumentet..." maxlength="200"
                             style="background:var(--bg);color:var(--text-main);border:1px solid var(--border);border-radius:7px;padding:7px 12px;font-size:14px;font-weight:700;outline:none;width:100%;"
@@ -822,6 +828,10 @@
                 <div class="split-pane" id="preview-pane">
                     <div id="meta-display" style="margin-bottom:20px; font-size:11px; color:var(--text-muted); display:flex; gap:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
                         <span id="meta-created"></span><span id="meta-updated"></span>
+                    </div>
+                    <div id="page-switcher" style="display:none;margin-bottom:16px;display:flex;gap:8px;">
+                        <button id="page-btn-1" class="btn btn-primary" style="font-size:12px;padding:5px 14px;" onclick="switchViewPage(1)">📄 Side 1</button>
+                        <button id="page-btn-2" class="btn btn-outline" style="font-size:12px;padding:5px 14px;" onclick="switchViewPage(2)">🔬 Side 2 – Avansert</button>
                     </div>
                     <div id="text-display"></div>
                 </div>
@@ -1972,11 +1982,13 @@
         Object.values(p5Instances).forEach(function(inst){try{inst.remove();}catch(e){}});
         p5Instances={};
         if(p5LoadTimeout) clearTimeout(p5LoadTimeout);
-        if(!file.content||file.content.trim()===""){
+        var pageContent = currentViewPage === 2 ? (file.content2 || '') : (file.content || '');
+        updateViewPage2Buttons(file);
+        if(!pageContent||pageContent.trim()===""){
             display.innerHTML="<div style='color:var(--text-muted);font-style:italic;'>Denne siden er tom.</div>";
             return;
         }
-        var mdText = file.content;
+        var mdText = pageContent;
         mdText = mdText.replace(/\[anim:(\d+)\]/gi, function(_,n){
             var idx=parseInt(n)-1, code=animCodes[idx]||'';
             if(!code.trim()) return '<span class="anim-tag-hint">[anim:'+n+' – ingen kode]</span>';
@@ -2088,11 +2100,85 @@
     function toggleEditorSection(contentId,headerElement){ var content=document.getElementById(contentId); var icon=headerElement.querySelector('.toggle-icon'); content.classList.toggle('closed'); icon.style.transform=content.classList.contains('closed')?'rotate(-90deg)':'rotate(0deg)'; }
     function toggleSidebar(){isSidebarVisible=!isSidebarVisible;render();}
     function toggleIndex(){isIndexVisible=!isIndexVisible;render();}
+    var currentViewPage = 1;
+    var currentEditorPage = 1;
+
+    function switchViewPage(n){
+        currentViewPage = n;
+        var f = currentPath[currentPath.length-1];
+        if(!f || f.type !== 'file') return;
+        document.getElementById('page-btn-1').className = n===1 ? 'btn btn-primary' : 'btn btn-outline';
+        document.getElementById('page-btn-2').className = n===2 ? 'btn btn-primary' : 'btn btn-outline';
+        updateLivePreview(f);
+    }
+
+    function switchEditorPage(n){
+        var f = currentPath[currentPath.length-1];
+        if(!f || f.type !== 'file') return;
+        // Save current page content first
+        if(currentEditorPage === 1){
+            f.content = validateString(document.getElementById('text-edit-area').value, CONFIG.MAX_CONTENT_LENGTH);
+        } else {
+            f.content2 = validateString(document.getElementById('text-edit-area').value, CONFIG.MAX_CONTENT_LENGTH);
+        }
+        richSegments = parseToSegments(n === 1 ? (f.content || '') : (f.content2 || ''));
+        renderRichEditor();
+        syncHiddenTextarea();
+        currentEditorPage = n;
+        document.getElementById('editor-page-btn-1').className = n===1 ? 'btn btn-primary' : 'btn btn-outline';
+        document.getElementById('editor-page-btn-2').className = n===2 ? 'btn btn-primary' : 'btn btn-outline';
+        updateEditorPage2Buttons(f);
+    }
+
+    function updateEditorPage2Buttons(f){
+        var hasPage2 = !!(f && f.content2 !== undefined && f.content2 !== null);
+        var sw = document.getElementById('editor-page-switcher');
+        if(sw) sw.style.display = 'flex';
+        var addBtn = document.getElementById('editor-add-page2-btn');
+        var delBtn = document.getElementById('editor-del-page2-btn');
+        var pg2Btn = document.getElementById('editor-page-btn-2');
+        if(addBtn) addBtn.style.display = hasPage2 ? 'none' : '';
+        if(delBtn) delBtn.style.display = hasPage2 ? '' : 'none';
+        if(pg2Btn) pg2Btn.style.display = hasPage2 ? '' : 'none';
+    }
+
+    function updateViewPage2Buttons(f){
+        var hasPage2 = !!(f && f.content2);
+        var sw = document.getElementById('page-switcher');
+        if(sw) sw.style.display = hasPage2 ? 'flex' : 'none';
+    }
+
+    function addPage2(){
+        var f = currentPath[currentPath.length-1];
+        if(!f || f.type !== 'file') return;
+        f.content2 = '';
+        updateEditorPage2Buttons(f);
+        switchEditorPage(2);
+        showToast('✅ Side 2 lagt til', 'success');
+    }
+
+    function deletePage2(){
+        if(!confirm('Slette side 2? Innholdet vil bli borte.')) return;
+        var f = currentPath[currentPath.length-1];
+        if(!f) return;
+        f.content2 = null;
+        currentEditorPage = 1;
+        richSegments = parseToSegments(f.content || '');
+        renderRichEditor();
+        syncHiddenTextarea();
+        updateEditorPage2Buttons(f);
+        showToast('🗑️ Side 2 slettet', 'success');
+    }
+
     function toggleEdit(){
         if(isEditing){
             var file=currentPath[currentPath.length-1];
             if(file && file.type==='file'){
-                file.content=validateString(document.getElementById('text-edit-area').value,CONFIG.MAX_CONTENT_LENGTH);
+                if(currentEditorPage === 2){
+                    file.content2=validateString(document.getElementById('text-edit-area').value,CONFIG.MAX_CONTENT_LENGTH);
+                } else {
+                    file.content=validateString(document.getElementById('text-edit-area').value,CONFIG.MAX_CONTENT_LENGTH);
+                }
                 var titleEl=document.getElementById('title-input');
                 if(titleEl) file.name=validateString(titleEl.value||file.name,CONFIG.MAX_TITLE_LENGTH);
                 var aliasEl=document.getElementById('alias-input');
@@ -2106,10 +2192,16 @@
             }
         }
         isEditing=!isEditing;
+        currentEditorPage = 1;
+        currentViewPage = 1;
         document.body.classList.toggle('is-editing', isEditing);
         var ta=document.getElementById('text-edit-area');
         if(ta) delete ta.dataset.loaded;
         render();
+        if(isEditing){
+            var fCur = currentPath[currentPath.length-1];
+            if(fCur && fCur.type==='file') updateEditorPage2Buttons(fCur);
+        }
     }
     function goHome(){currentPath=[db];isEditing=false;document.body.classList.remove('is-editing');render();}
     function goBack(){if(currentPath.length>1){currentPath.pop();isEditing=false;document.body.classList.remove('is-editing');render();}}
@@ -2132,7 +2224,11 @@
 
     function triggerAutosave(updateTitle){
         var file=currentPath[currentPath.length-1]; if(!file||file.type!=='file') return;
-        file.content=validateString(document.getElementById('text-edit-area').value,CONFIG.MAX_CONTENT_LENGTH);
+        if(currentEditorPage === 2){
+            file.content2=validateString(document.getElementById('text-edit-area').value,CONFIG.MAX_CONTENT_LENGTH);
+        } else {
+            file.content=validateString(document.getElementById('text-edit-area').value,CONFIG.MAX_CONTENT_LENGTH);
+        }
         var titleEl=document.getElementById('title-input');
         if(updateTitle && titleEl) file.name=validateString(titleEl.value||file.name,CONFIG.MAX_TITLE_LENGTH);
         var aliasEl=document.getElementById('alias-input');
