@@ -888,6 +888,8 @@
         // ── FANER / TABS ─────────────────────────────────────────────
         mdText = mdText.replace(/:::faner\s*\n([\s\S]*?):::/g, function(_, inner) {
             var id = 'tabs-' + (_blockCounter++);
+            var desc = '';
+            inner = inner.replace(/^#desc (.+)\n?/m, function(_, d){ desc = d.trim(); return ''; });
             var tabRegex = /---\s*(.+?)\s*\n([\s\S]*?)(?=---|\s*$)/g;
             var tabs = [], contents = [], m;
             while ((m = tabRegex.exec(inner)) !== null) {
@@ -895,6 +897,7 @@
                 contents.push(m[2].trim());
             }
             if (!tabs.length) return inner;
+            var descHtml = desc ? '<div style="font-size:13px;color:var(--text-muted);padding:10px 14px 6px;border-bottom:1px solid var(--border);background:rgba(88,166,255,0.04);">📌 '+desc+'</div>' : '';
             var btnHtml = tabs.map(function(t, i) {
                 return '<button class="wiki-tab-btn' + (i===0?' active':'') + '" onclick="wikiSwitchTab(\''+id+'\','+i+')" id="'+id+'-btn-'+i+'">'+t+'</button>';
             }).join('');
@@ -903,7 +906,7 @@
                 blocks[bid] = { type: 'tabcontent', md: c };
                 return '<div class="wiki-tab-pane'+(i===0?' active':'')+'" id="'+id+'-pane-'+i+'">TABCONTENT_'+bid+'</div>';
             }).join('');
-            return '<div class="wiki-tabs" id="'+id+'"><div class="wiki-tab-bar">'+btnHtml+'</div><div class="wiki-tab-body">'+paneHtml+'</div></div>';
+            return '<div class="wiki-tabs" id="'+id+'">'+descHtml+'<div class="wiki-tab-bar">'+btnHtml+'</div><div class="wiki-tab-body">'+paneHtml+'</div></div>';
         });
 
         mdText = mdText.replace(/:::sim\s*\n([\s\S]*?):::/g, function(_, code) {
