@@ -371,6 +371,10 @@
             margin: 14px; width: calc(100% - 28px); min-height: 100px;
         }
         .re-widget-content-area:focus { border-color: #a371f7; }
+        .re-tab-img-bar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(88,166,255,0.04); border-top: 1px solid rgba(88,166,255,0.15); }
+        .re-tab-img-btn { font-size: 11px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 5px; padding: 3px 10px; cursor: pointer; }
+        .re-tab-img-btn:hover { border-color: var(--blue); color: var(--blue); }
+        .re-tab-img-preview { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; display: none; cursor: pointer; border: 1px solid var(--border); }
 
 
         .wiki-tabs { margin: 24px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
@@ -892,9 +896,13 @@
             inner = inner.replace(/^#desc (.+)\n?/m, function(_, d){ desc = d.trim(); return ''; });
             var tabRegex = /---\s*(.+?)\s*\n([\s\S]*?)(?=---|\s*$)/g;
             var tabs = [], contents = [], m;
+            var images = [];
             while ((m = tabRegex.exec(inner)) !== null) {
                 tabs.push(m[1].trim());
-                contents.push(m[2].trim());
+                var tabContent = m[2].trim();
+                var imgMatch = tabContent.match(/^#img (.+)$/m);
+                images.push(imgMatch ? imgMatch[1].trim() : '');
+                contents.push(tabContent.replace(/^#img [^\n]+\n?/m, '').trim());
             }
             if (!tabs.length) return inner;
             var descHtml = desc ? '<div style="font-size:13px;color:var(--text-muted);padding:10px 14px 6px;border-bottom:1px solid var(--border);background:rgba(88,166,255,0.04);">📌 '+desc+'</div>' : '';
@@ -904,7 +912,8 @@
             var paneHtml = contents.map(function(c, i) {
                 var bid = 'tabpane-'+id+'-'+i;
                 blocks[bid] = { type: 'tabcontent', md: c };
-                return '<div class="wiki-tab-pane'+(i===0?' active':'')+'" id="'+id+'-pane-'+i+'">TABCONTENT_'+bid+'</div>';
+                var imgHtml = images[i] ? '<img src="'+images[i]+'" style="max-width:100%;max-height:260px;object-fit:contain;border-radius:8px;margin-bottom:12px;display:block;" data-db-img="'+images[i]+'">' : '';
+                return '<div class="wiki-tab-pane'+(i===0?' active':'')+'" id="'+id+'-pane-'+i+'">'+imgHtml+'TABCONTENT_'+bid+'</div>';
             }).join('');
             return '<div class="wiki-tabs" id="'+id+'">'+descHtml+'<div class="wiki-tab-bar">'+btnHtml+'</div><div class="wiki-tab-body">'+paneHtml+'</div></div>';
         });
@@ -942,7 +951,7 @@
                 var inner = m[1];
                 var lines = inner.split('\n');
                 var steps = [];
-                var curTitle = null, curLines = [];
+                var curTitle = null, curLines = [], curImage = '';
                 var tabDesc = '';
                 lines.forEach(function(line){
                     var dm = line.match(/^#desc (.*)$/);
@@ -950,14 +959,16 @@
                     if(dm && curTitle === null){
                         tabDesc = dm[1].trim();
                     } else if(sm){
-                        if(curTitle !== null) steps.push({ title: curTitle, content: curLines.join('\n').replace(/\n+$/,'') });
+                        if(curTitle !== null) steps.push({ title: curTitle, image: curImage, content: curLines.join('\n').replace(/\n+$/,'') });
                         curTitle = sm[1].trim() || 'Steg';
+                        curImage = '';
                         curLines = [];
                     } else if(curTitle !== null){
-                        curLines.push(line);
+                        var im = line.match(/^#img (.*)$/);
+                        if(im){ curImage = im[1].trim(); } else { curLines.push(line); }
                     }
                 });
-                if(curTitle !== null) steps.push({ title: curTitle, content: curLines.join('\n').replace(/\n+$/,'') });
+                if(curTitle !== null) steps.push({ title: curTitle, image: curImage, content: curLines.join('\n').replace(/\n+$/,'') });
                 if(steps.length === 0) steps.push({ title:'Steg 1', content:'' });
                 segments.push({ type:'tabs', steps: steps, description: tabDesc });
             } else {
@@ -979,7 +990,9 @@
             var md = ':::faner\n';
             if(seg.description && seg.description.trim()) md += '#desc ' + seg.description.trim() + '\n';
             seg.steps.forEach(function(step){
-                md += '--- ' + (step.title || 'Steg').trim() + '\n' + (step.content || '').trim() + '\n\n';
+                md += '--- ' + (step.title || 'Steg').trim() + '\n';
+                if(step.image) md += '#img ' + step.image.trim() + '\n';
+                md += (step.content || '').trim() + '\n\n';
             });
             md += ':::\n';
             return md;
@@ -1183,6 +1196,72 @@
                         lastFocusedTextSegment = { type:'tabs', _stepRef: step };
                     };
                     wrap.appendChild(contentArea);
+
+                    // Bildeknappraden per steg
+                    var imgBar = document.createElement('div');
+                    imgBar.className = 're-tab-img-bar';
+
+                    var imgPreview = document.createElement('img');
+                    imgPreview.className = 're-tab-img-preview';
+                    if(step.image){
+                        imgPreview.style.display = 'block';
+                        // Last bilde fra Firebase
+                        (function(s, el){
+                            if(s.image && s.image.startsWith('db:')){
+                                firebase.database().ref('wiki-images/' + s.image.replace('db:','')).once('value').then(function(snap){
+                                    if(snap.val()) el.src = snap.val();
+                                });
+                            }
+                        })(step, imgPreview);
+                    }
+
+                    var imgBtn = document.createElement('button');
+                    imgBtn.className = 're-tab-img-btn';
+                    imgBtn.textContent = step.image ? '🖼️ Bytt bilde' : '🖼️ Legg til bilde';
+                    imgBtn.onclick = (function(s, previewEl, btnEl){
+                        return async function(e){
+                            e.stopPropagation();
+                            btnEl.textContent = '⏳ Laster opp...';
+                            btnEl.disabled = true;
+                            var url = await uploadImageFile(null);
+                            btnEl.disabled = false;
+                            if(url){
+                                s.image = url;
+                                previewEl.style.display = 'block';
+                                firebase.database().ref('wiki-images/' + url.replace('db:','')).once('value').then(function(snap){
+                                    if(snap.val()) previewEl.src = snap.val();
+                                });
+                                btnEl.textContent = '🖼️ Bytt bilde';
+                                syncHiddenTextarea();
+                                showToast('✅ Bilde lagt til i steget', 'success');
+                            } else {
+                                btnEl.textContent = s.image ? '🖼️ Bytt bilde' : '🖼️ Legg til bilde';
+                            }
+                        };
+                    })(step, imgPreview, imgBtn);
+
+                    var delImgBtn = document.createElement('button');
+                    delImgBtn.className = 're-tab-img-btn';
+                    delImgBtn.textContent = '✕';
+                    delImgBtn.title = 'Fjern bilde';
+                    delImgBtn.style.display = step.image ? '' : 'none';
+                    delImgBtn.onclick = (function(s, previewEl, addBtn, delEl){
+                        return function(e){
+                            e.stopPropagation();
+                            s.image = '';
+                            previewEl.style.display = 'none';
+                            previewEl.src = '';
+                            addBtn.textContent = '🖼️ Legg til bilde';
+                            delEl.style.display = 'none';
+                            syncHiddenTextarea();
+                        };
+                    })(step, imgPreview, imgBtn, delImgBtn);
+
+                    imgBar.appendChild(imgPreview);
+                    imgBar.appendChild(imgBtn);
+                    imgBar.appendChild(delImgBtn);
+                    wrap.appendChild(imgBar);
+
                     contentWraps.push(wrap);
                     block.appendChild(wrap);
                     setTimeout(function(){ autoGrow(contentArea); }, 0);
@@ -1487,9 +1566,10 @@
     }
 
     async function resolveDbImages(container){
-        var imgs = container.querySelectorAll('img[src^="db:"]');
+        var imgs = container.querySelectorAll('img[src^="db:"], img[data-db-img]');
         for(var img of imgs){
-            var imgId = img.getAttribute('src').replace('db:','');
+            var ref = img.getAttribute('data-db-img') || img.getAttribute('src');
+            var imgId = ref.replace('db:','');
             try {
                 var snap = await firebase.database().ref('wiki-images/' + imgId).once('value');
                 if(snap.val()) img.src = snap.val();
