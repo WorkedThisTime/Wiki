@@ -958,6 +958,9 @@
         while((m = re.exec(text)) !== null){
             if(m.index > lastIndex){
                 segments.push({ type:'text', value: text.substring(lastIndex, m.index) });
+            } else {
+                // Alltid ha en skrivebok over fane/widget-blokker
+                segments.push({ type:'text', value:'' });
             }
             if(m[1] !== undefined){
                 var inner = m[1];
@@ -1023,13 +1026,17 @@
     function autoGrow(el){
         el.style.height = 'auto';
         var h = el.scrollHeight;
-        // Fallback for skjulte elementer: estimer fra innhold
-        if(h <= 4 && el.value){
-            var lines = el.value.split('\n').length;
-            var lineH = parseFloat(getComputedStyle(el).lineHeight) || 22;
-            h = Math.max(lines * lineH + 24, 60);
+        // Fallback for skjulte eller tomme elementer
+        if(h <= 4){
+            if(el.value){
+                var lines = el.value.split('\n').length;
+                var lineH = parseFloat(getComputedStyle(el).lineHeight) || 22;
+                h = Math.max(lines * lineH + 24, 60);
+            } else {
+                h = 60;
+            }
         }
-        el.style.height = (h + 4) + 'px';
+        el.style.height = Math.max(h, 60) + 'px';
     }
 
     function renderRichEditor(){
