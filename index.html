@@ -2085,6 +2085,22 @@
     function toggleSidebar(){isSidebarVisible=!isSidebarVisible;render();}
     function toggleIndex(){isIndexVisible=!isIndexVisible;render();}
     function toggleEdit(){
+        if(isEditing){
+            var file=currentPath[currentPath.length-1];
+            if(file && file.type==='file'){
+                file.content=validateString(document.getElementById('text-edit-area').value,CONFIG.MAX_CONTENT_LENGTH);
+                var titleEl=document.getElementById('title-input');
+                if(titleEl) file.name=validateString(titleEl.value||file.name,CONFIG.MAX_TITLE_LENGTH);
+                var aliasEl=document.getElementById('alias-input');
+                if(aliasEl) file.aliases=validateString(aliasEl.value,CONFIG.MAX_ALIAS_LENGTH);
+                file.animationCodes=readAnimSlots();
+                delete file.animationCode;
+                file.updatedAt=Date.now();
+                clearTimeout(autosaveTimeout);
+                saveToDatabase();
+                showToast('✅ Lagret', 'success');
+            }
+        }
         isEditing=!isEditing;
         document.body.classList.toggle('is-editing', isEditing);
         var ta=document.getElementById('text-edit-area');
@@ -2121,9 +2137,7 @@
         delete file.animationCode;
         file.updatedAt=Date.now();
         updateLivePreview(file); updateRelatedWordsList(file);
-        clearTimeout(autosaveTimeout);
-        document.getElementById('save-status-indicator').innerText="Venter på at du slutter å skrive...";
-        autosaveTimeout=setTimeout(function(){saveToDatabase();document.getElementById('save-status-indicator').innerText="✅ Skyen er oppdatert";},CONFIG.AUTOSAVE_DELAY);
+        document.getElementById('save-status-indicator').innerText="Ikke lagret — lukk editoren for å lagre.";
     }
 
     function handleImageDropOnFolder(file, folderId){
