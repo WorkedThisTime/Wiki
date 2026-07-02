@@ -792,6 +792,7 @@
                         <label style="cursor:pointer;" class="toolbar-btn" onmousedown="rememberCursor()">
                             🖼️ Last opp bilde
                             <input type="file" id="image-file-input" style="display:none;" accept="image/*" multiple onchange="handleImageFiles(this.files)">
+                        <input type="file" id="tab-image-file-input" style="display:none;" accept="image/*">
                         </label>
                         <button class="toolbar-btn" onclick="insertTabBlock()">🗂️ Sett inn faner</button>
                         <button class="toolbar-btn" onclick="insertWidgetBlock()">🎬 Sett inn animasjon</button>
@@ -1219,13 +1220,9 @@
                     imgBtn.className = 're-tab-img-btn';
                     imgBtn.textContent = step.image ? '🖼️ Bytt bilde' : '🖼️ Legg til bilde';
                     imgBtn.onclick = (function(s, previewEl, btnEl){
-                        return async function(e){
+                        return function(e){
                             e.stopPropagation();
-                            btnEl.textContent = '⏳ Laster opp...';
-                            btnEl.disabled = true;
-                            var url = await uploadImageFile(null);
-                            btnEl.disabled = false;
-                            if(url){
+                            pickTabImage(function(url){
                                 s.image = url;
                                 previewEl.style.display = 'block';
                                 firebase.database().ref('wiki-images/' + url.replace('db:','')).once('value').then(function(snap){
@@ -1234,9 +1231,7 @@
                                 btnEl.textContent = '🖼️ Bytt bilde';
                                 syncHiddenTextarea();
                                 showToast('✅ Bilde lagt til i steget', 'success');
-                            } else {
-                                btnEl.textContent = s.image ? '🖼️ Bytt bilde' : '🖼️ Legg til bilde';
-                            }
+                            });
                         };
                     })(step, imgPreview, imgBtn);
 
@@ -1623,6 +1618,25 @@
             showToast('✅ Bilde satt inn i tekst','success');
         }
     }
+
+    var _tabImgCallback = null;
+
+    function pickTabImage(callback){
+        _tabImgCallback = callback;
+        document.getElementById('tab-image-file-input').value = '';
+        document.getElementById('tab-image-file-input').click();
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+        document.getElementById('tab-image-file-input').onchange = async function(){
+            var file = this.files && this.files[0];
+            if(!file || !_tabImgCallback) return;
+            var cb = _tabImgCallback;
+            _tabImgCallback = null;
+            var url = await uploadImageFile(file);
+            if(url) cb(url);
+        };
+    });
 
     async function handleImageFiles(files){
         var editPane = document.getElementById('edit-pane');
