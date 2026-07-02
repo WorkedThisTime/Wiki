@@ -126,7 +126,7 @@
         #text-edit-area.drag-active { border-color: var(--blue); background: rgba(88,166,255,0.05); }
 
         #text-display { line-height: 1.8; font-size: 1.1rem; max-width: 900px; margin: 0 auto; padding-bottom: 50px; }
-        #text-display img { max-width: 100%; border-radius: 8px; margin: 20px 0; }
+        #text-display img { max-width: 50%; max-height: 50%; border-radius: 8px; margin: 20px 0; display: block; }
         #text-display blockquote { border-left: 4px solid var(--blue); padding-left: 15px; color: var(--text-muted); margin: 20px 0; }
         #text-display table { width: 100%; border-collapse: collapse; margin: 20px 0; }
         #text-display th, #text-display td { border: 1px solid var(--border); padding: 10px; text-align: left; }
@@ -799,6 +799,17 @@
                         <div class="upload-progress" id="upload-progress">
                             <div class="spinner"></div>
                             <span id="upload-progress-text">Laster opp...</span>
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+                        <input id="title-input" type="text" placeholder="Tittel på dokumentet..." maxlength="200"
+                            style="background:var(--bg);color:var(--text-main);border:1px solid var(--border);border-radius:7px;padding:7px 12px;font-size:14px;font-weight:700;outline:none;width:100%;"
+                            oninput="onTitleInput(this.value)" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+                        <div style="position:relative;">
+                            <input id="alias-input" type="text" placeholder="Aliaser / alternative navn (kommaseparert, f.eks. Hastighet, v, fart)..." maxlength="500"
+                                style="background:var(--bg);color:var(--text-muted);border:1px solid var(--border);border-radius:7px;padding:7px 12px;font-size:12px;outline:none;width:100%;"
+                                oninput="onAliasInput()" onfocus="this.style.borderColor='var(--blue)';this.style.color='var(--text-main)'" onblur="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+                            <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--text-muted);pointer-events:none;">🏷️</span>
                         </div>
                     </div>
                     <div id="rich-editor-container"></div>
@@ -2090,6 +2101,13 @@
         if(!Array.isArray(parent.children)) parent.children=[];
         parent.children.push({id:generateId(),name:validateString(name,CONFIG.MAX_TITLE_LENGTH),type:type,createdAt:Date.now(),updatedAt:Date.now(),content:"",aliases:"",animationCodes:[],children:type==='folder'?[]:undefined});
         saveToDatabase(); render(); showToast('✅ Opprettet','success');
+    }
+
+    function onTitleInput(val){
+        triggerAutosave(true);
+    }
+    function onAliasInput(){
+        triggerAutosave(false);
     }
 
     function triggerAutosave(updateTitle){
