@@ -812,7 +812,7 @@
         <div id="editor-view">
             <div class="editor-header">
                 <div style="display:flex; gap:15px; align-items:center;">
-                    <button id="btn-back-explorer" class="btn btn-outline" onclick="goBack()">← Tilbake</button>
+                    <button id="btn-back-explorer" class="btn btn-outline" onclick="goBack()">← Utforsker</button>
                     <h1 id="page-title" style="font-size:1.5rem; margin:0; color:var(--text-main);"></h1>
                 </div>
                 <div style="display:flex; gap:10px;">
@@ -994,6 +994,7 @@
     // ── RIK EDITOR MED EKTE FANE-BOKSER ───────────────────────────────
     // Modell: array av segmenter. Hvert segment er enten {type:'text', value} eller {type:'tabs', steps:[{title,content}]}
     var richSegments = [];
+    var richSegmentsCache = { 1: null, 2: null, fileId: null };
 
     function parseToSegments(text){
         var segments = [];
@@ -1907,13 +1908,18 @@
     function render(){
         var currentItem=currentPath[currentPath.length-1];
         if(!currentItem){currentPath=[db];return;}
-        var inDocument = currentItem.type !== "folder";
-        // Skjul sidebar helt når man er i et dokument
-        document.querySelector('.sidebar').style.display = inDocument ? "none" : (isSidebarVisible ? "flex" : "none");
+        document.querySelector('.sidebar').style.display=isSidebarVisible?"flex":"none";
         renderSidebarTree(); renderBreadcrumbs();
-        // Tilbake-knapp skal alltid fungere
+        var inDocument = currentItem.type !== "folder";
+        // Skjul utforsker-seksjonen når man er i et dokument
+        var explorerSection = document.getElementById('explorer-section');
+        if(explorerSection) explorerSection.style.display = inDocument ? 'none' : '';
+        // Utforsker-knapp: grå ut når man er i et dokument
         var explorerBtn = document.getElementById('btn-back-explorer');
-        if(explorerBtn){ explorerBtn.classList.remove('btn-explorer-disabled'); }
+        if(explorerBtn){
+            if(inDocument) explorerBtn.classList.add('btn-explorer-disabled');
+            else explorerBtn.classList.remove('btn-explorer-disabled');
+        }
         // Status-tekst: skjul tekst, vis bare prikk når i dokument
         var statusText = document.getElementById('status-text');
         if(statusText) statusText.style.display = inDocument ? 'none' : '';
@@ -2009,9 +2015,16 @@
             var ta = document.getElementById('text-edit-area');
             // Bare last innhold hvis editoren ikke allerede er lastet for denne filen
             if(ta && !ta.dataset.loaded){
-                ta.value = validateString(file.content||"", CONFIG.MAX_CONTENT_LENGTH);
+                // Pre-cache begge sider slik at bytte er øyeblikkelig
+                richSegmentsCache.fileId = file.id || '';
+                richSegmentsCache[1] = parseToSegments(file.content || '');
+                richSegmentsCache[2] = parseToSegments(file.content2 || '');
+                var pageContent = currentEditorPage === 2 ? (file.content2||"") : (file.content||"");
+                ta.value = validateString(pageContent, CONFIG.MAX_CONTENT_LENGTH);
                 ta.dataset.loaded = '1';
-                loadRichEditor(ta.value);
+                richSegments = richSegmentsCache[currentEditorPage];
+                renderRichEditor();
+                syncHiddenTextarea();
             }
             renderAnimSlots(getAnimCodes(file));
             document.getElementById('edit-toggle-btn').innerHTML="Lukk Redigering";
@@ -2202,7 +2215,13 @@
             f.content2 = validateString(document.getElementById('text-edit-area').value, CONFIG.MAX_CONTENT_LENGTH);
         }
         currentEditorPage = n;
-        richSegments = parseToSegments(n === 1 ? (f.content || '') : (f.content2 || ''));
+        // Bruk cache hvis tilgjengelig, ellers parse
+        if(richSegmentsCache.fileId === (f.id||'') && richSegmentsCache[n] !== null){
+            richSegments = richSegmentsCache[n];
+        } else {
+            richSegments = parseToSegments(n === 1 ? (f.content || '') : (f.content2 || ''));
+            richSegmentsCache[n] = richSegments;
+        }
         renderRichEditor();
         syncHiddenTextarea();
         document.getElementById('editor-page-btn-1').className = n===1 ? 'btn btn-primary' : 'btn btn-outline';
