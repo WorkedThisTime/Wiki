@@ -116,6 +116,7 @@
         .icon-btn.danger:hover { background: var(--danger); }
 
         #editor-view { display: none; height: 100%; flex-direction: column; }
+        .btn-explorer-disabled { opacity: 0.35 !important; cursor: default !important; pointer-events: none !important; }
         .editor-header { padding: 20px 40px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--bg); flex-shrink: 0; }
         .split-container { display: flex; flex-grow: 1; overflow: hidden; }
         .split-pane { flex: 1; overflow-y: auto; padding: 30px; position: relative; min-height: 0; }
@@ -811,7 +812,7 @@
         <div id="editor-view">
             <div class="editor-header">
                 <div style="display:flex; gap:15px; align-items:center;">
-                    <button class="btn btn-outline" onclick="goBack()">← Utforsker</button>
+                    <button id="btn-back-explorer" class="btn btn-outline" onclick="goBack()">← Utforsker</button>
                     <h1 id="page-title" style="font-size:1.5rem; margin:0; color:var(--text-main);"></h1>
                 </div>
                 <div style="display:flex; gap:10px;">
@@ -1908,6 +1909,17 @@
         if(!currentItem){currentPath=[db];return;}
         document.querySelector('.sidebar').style.display=isSidebarVisible?"flex":"none";
         renderSidebarTree(); renderBreadcrumbs();
+        var inDocument = currentItem.type !== "folder";
+        // Utforsker-knapp: grå ut når man er i et dokument
+        var explorerBtn = document.getElementById('btn-back-explorer');
+        if(explorerBtn){
+            if(inDocument) explorerBtn.classList.add('btn-explorer-disabled');
+            else explorerBtn.classList.remove('btn-explorer-disabled');
+        }
+        // Status-tekst: skjul tekst, vis bare prikk når i dokument
+        var statusText = document.getElementById('status-text');
+        if(statusText) statusText.style.display = inDocument ? 'none' : '';
+
         if(currentItem.type==="folder"){
             document.getElementById('browser-view').style.display="block";
             document.getElementById('editor-view').style.display="none";
