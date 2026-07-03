@@ -2087,7 +2087,7 @@
     function buildTOC(){
         var listEl = document.getElementById('related-words-list');
         listEl.innerHTML = '';
-        var display = document.getElementById('article-display');
+        var display = document.getElementById('text-display');
         if(!display){ listEl.innerHTML='<div style="padding:15px 10px;font-size:12px;color:var(--text-muted);font-style:italic;">Ingen innhold.</div>'; return; }
 
         var headings = display.querySelectorAll('h1,h2,h3,h4');
