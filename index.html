@@ -2157,6 +2157,11 @@
 
     // ── WIKI LINKS ───────────────────────────────────────────────────
     function injectWikiLinks(html,currentFileId){
+        // Alt etter <h3>Kilder</h3> skal ikke få wiki-lenker
+        var kildeMatch = html.search(/<h[1-6][^>]*>\s*Kilder\s*<\/h[1-6]>/i);
+        var mainHtml = kildeMatch !== -1 ? html.substring(0, kildeMatch) : html;
+        var kildeHtml = kildeMatch !== -1 ? html.substring(kildeMatch) : '';
+
         var allPages=getAllFiles(db).sort(function(a,b){return (b.name||'').length-(a.name||'').length;});
         allPages.forEach(function(page){
             if(!page||page.id===currentFileId) return;
@@ -2164,11 +2169,11 @@
             if(page.aliases) kw.push.apply(kw,page.aliases.split(/[,/]/).map(function(s){return s.trim();}).filter(function(s){return s.length>0;}));
             Array.from(new Set(kw)).forEach(function(word){
                 if(word.length<1) return;
-                html=html.replace(new RegExp('(\\$\\$[\\s\\S]*?\\$\\$|\\\\\\[[\\s\\S]*?\\\\\\]|\\$[^$]+?\\$|\\\\\\([\\s\\S]*?\\\\\\)|<[^>]+>)|\\b('+escapeRegExp(word)+')\\b','gi'),
-                    function(m,ign){return ign?ign:'<span class="wiki-link" onclick="openQuickView(\''+sanitizeHTML(page.id)+'\')">'+m+'</span>';});
+                mainHtml=mainHtml.replace(new RegExp('(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^$]+?\$|\\\([\s\S]*?\\\)|<[^>]+>)|\b('+escapeRegExp(word)+')\b','gi'),
+                    function(m,ign){return ign?ign:'<span class="wiki-link" onclick="openQuickView(''+sanitizeHTML(page.id)+'')">'+m+'</span>';});
             });
         });
-        return html;
+        return mainHtml + kildeHtml;
     }
 
     // ── TABLE OF CONTENTS ──────────────────────────────────────────
