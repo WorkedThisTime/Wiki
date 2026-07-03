@@ -1441,23 +1441,72 @@
                 s.textContent = block.code;
                 document.body.appendChild(s);
             } else if (block.type === 'widget') {
-                var inner = container.querySelector('#' + id);
-                if (!inner) return;
-                var rawHtml = block.code;
-                rawHtml = rawHtml.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, function(_, css) {
-                    var styleEl = document.createElement('style');
-                    styleEl.textContent = css;
-                    document.head.appendChild(styleEl);
-                    return '';
-                });
-                inner.innerHTML = rawHtml;
-                var scripts = inner.querySelectorAll('script');
-                scripts.forEach(function(oldScript) {
-                    var newScript = document.createElement('script');
-                    if (oldScript.src) newScript.src = oldScript.src;
-                    else newScript.textContent = oldScript.textContent;
-                    oldScript.parentNode.replaceChild(newScript, oldScript);
-                });
+                var wrapper = container.querySelector('#wrap-' + id);
+                if (!wrapper) return;
+                var code = block.code;
+
+                // Bygg en fullstendig HTML-side for iframen
+                var srcdoc = '<!DOCTYPE html><html><head><meta charset="utf-8">'
+                    + '<style>*{box-sizing:border-box;margin:0;padding:0;}body{background:transparent;overflow:hidden;}</style>'
+                    + '</head><body>' + code + '</body></html>';
+
+                // Placeholder med play-knapp — ikke last animasjon før synlig
+                wrapper.innerHTML = '';
+                wrapper.style.cssText = 'position:relative;border-radius:10px;overflow:hidden;min-height:120px;background:rgba(163,113,247,0.04);border:1px solid rgba(163,113,247,0.3);';
+
+                var placeholder = document.createElement('div');
+                placeholder.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;gap:12px;min-height:120px;cursor:pointer;';
+                placeholder.innerHTML = '<div style="font-size:28px;">🎬</div>'
+                    + '<div style="font-size:13px;color:#a371f7;font-weight:600;">Interaktiv animasjon</div>'
+                    + '<div style="font-size:11px;color:#8b949e;">Klikk for å starte</div>';
+
+                var iframe = null;
+                var observer = null;
+
+                function loadIframe() {
+                    if(iframe) return;
+                    placeholder.style.display = 'none';
+                    iframe = document.createElement('iframe');
+                    iframe.style.cssText = 'width:100%;border:none;display:block;border-radius:10px;';
+                    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+                    iframe.srcdoc = srcdoc;
+                    wrapper.appendChild(iframe);
+
+                    // Auto-høyde etter innlasting
+                    iframe.onload = function(){
+                        try {
+                            var h = iframe.contentDocument && iframe.contentDocument.body
+                                ? iframe.contentDocument.body.scrollHeight : 0;
+                            iframe.style.height = (Math.max(h, 200)) + 'px';
+                        } catch(e) { iframe.style.height = '340px'; }
+                    };
+                }
+
+                function unloadIframe() {
+                    if(!iframe) return;
+                    iframe.remove();
+                    iframe = null;
+                    placeholder.style.display = 'flex';
+                }
+
+                placeholder.onclick = loadIframe;
+                wrapper.appendChild(placeholder);
+
+                // IntersectionObserver: last inn automatisk når synlig, fjern når ute
+                if('IntersectionObserver' in window){
+                    observer = new IntersectionObserver(function(entries){
+                        entries.forEach(function(entry){
+                            if(entry.isIntersecting){
+                                // Autostart når brukeren scroller til den
+                                if(!iframe) loadIframe();
+                            } else {
+                                // Pause: fjern iframen når den er ute av syne (frigjør CPU)
+                                unloadIframe();
+                            }
+                        });
+                    }, { rootMargin: '100px' });
+                    observer.observe(wrapper);
+                }
             }
         });
     }
