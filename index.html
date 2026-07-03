@@ -1909,10 +1909,8 @@
         var currentItem=currentPath[currentPath.length-1];
         if(!currentItem){currentPath=[db];return;}
         var inDocument = currentItem.type !== "folder";
-        // Skjul sidebar helt når man er i et dokument
         document.querySelector('.sidebar').style.display = inDocument ? "none" : (isSidebarVisible ? "flex" : "none");
         renderSidebarTree(); renderBreadcrumbs();
-        // Tilbake-knapp skal alltid fungere
         var explorerBtn = document.getElementById('btn-back-explorer');
         if(explorerBtn){ explorerBtn.classList.remove('btn-explorer-disabled'); }
         // Status-tekst: skjul tekst, vis bare prikk når i dokument
@@ -2010,12 +2008,11 @@
             var ta = document.getElementById('text-edit-area');
             // Bare last innhold hvis editoren ikke allerede er lastet for denne filen
             if(ta && !ta.dataset.loaded){
-                // Pre-cache begge sider slik at bytte er øyeblikkelig
                 richSegmentsCache.fileId = file.id || '';
                 richSegmentsCache[1] = parseToSegments(file.content || '');
                 richSegmentsCache[2] = parseToSegments(file.content2 || '');
-                var pageContent = currentEditorPage === 2 ? (file.content2||"") : (file.content||"");
-                ta.value = validateString(pageContent, CONFIG.MAX_CONTENT_LENGTH);
+                var pageContent2 = currentEditorPage === 2 ? (file.content2||"") : (file.content||"");
+                ta.value = validateString(pageContent2, CONFIG.MAX_CONTENT_LENGTH);
                 ta.dataset.loaded = '1';
                 richSegments = richSegmentsCache[currentEditorPage];
                 renderRichEditor();
@@ -2061,7 +2058,15 @@
             buildTOC();
         },50);
         p5LoadTimeout=setTimeout(function(){
+            // Finn kun animasjoner som faktisk er referert på denne siden
+            var animRefs = {};
+            var animMatches = pageContent.match(/\[anim:(\d+)\]/gi) || [];
+            animMatches.forEach(function(m){
+                var n = parseInt(m.replace(/\D/g,'')) - 1;
+                if(!isNaN(n)) animRefs[n] = true;
+            });
             animCodes.forEach(function(code,idx){
+                if(!animRefs[idx]) return; // Ikke på denne siden
                 if(!code||!code.trim()) return;
                 var cid='p5-container-'+file.id+'-'+idx;
                 if(!document.getElementById(cid)) return;
@@ -2226,11 +2231,11 @@
             f.content2 = validateString(document.getElementById('text-edit-area').value, CONFIG.MAX_CONTENT_LENGTH);
         }
         currentEditorPage = n;
-        if(richSegmentsCache.fileId === (f.id||'') && richSegmentsCache[n] !== null){
+        if(richSegmentsCache && richSegmentsCache.fileId === (f.id||'') && richSegmentsCache[n] !== null){
             richSegments = richSegmentsCache[n];
         } else {
             richSegments = parseToSegments(n === 1 ? (f.content || '') : (f.content2 || ''));
-            richSegmentsCache[n] = richSegments;
+            if(richSegmentsCache) richSegmentsCache[n] = richSegments;
         }
         renderRichEditor();
         syncHiddenTextarea();
