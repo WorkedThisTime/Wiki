@@ -1146,10 +1146,6 @@
                 setTimeout(function(){ autoGrow(wContentArea); }, 0);
 
                 container.appendChild(wblock);
-                var nextSegW = richSegments[segIdx + 1];
-                if(!nextSegW || nextSegW.type !== 'text'){
-                    richSegments.splice(segIdx + 1, 0, { type:'text', value:'' });
-                }
             } else {
                 var block = document.createElement('div');
                 block.className = 're-tabblock';
@@ -1322,15 +1318,21 @@
                 });
 
                 container.appendChild(block);
-
-                // Legg til en tekst-textarea etter hver tabblock/widget for å kunne fortsette å skrive
-                var nextSeg = richSegments[segIdx + 1];
-                if(!nextSeg || nextSeg.type !== 'text'){
-                    var emptyTextSeg = { type:'text', value:'' };
-                    richSegments.splice(segIdx + 1, 0, emptyTextSeg);
-                }
             }
         });
+        // Etter forEach: sørg for at det er én tekstboks etter hver widget/tabs-blokk.
+        // Gå baklengs for å unngå indeksproblemer ved splice.
+        var needsRerender = false;
+        for(var i = richSegments.length - 1; i >= 0; i--){
+            if(richSegments[i].type === 'widget' || richSegments[i].type === 'tabs'){
+                var next = richSegments[i + 1];
+                if(!next || next.type !== 'text'){
+                    richSegments.splice(i + 1, 0, { type:'text', value:'' });
+                    needsRerender = true;
+                }
+            }
+        }
+        if(needsRerender) renderRichEditor();
     }
 
     function mergeAdjacentTextSegments(){
