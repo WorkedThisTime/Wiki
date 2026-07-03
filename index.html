@@ -775,7 +775,7 @@
     <div class="middle-panel" id="middle-panel">
         <div class="sidebar-section">
             <div class="sidebar-title" style="color:var(--blue); display:flex; justify-content:space-between; align-items:center; padding-right:10px;">
-                <span>Lenker i tekst</span>
+                <span>Innhold</span>
                 <button style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:12px;" onclick="toggleIndex()">✖️</button>
             </div>
             <div id="related-words-list" style="overflow-y:auto;"></div>
@@ -815,7 +815,7 @@
                     <h1 id="page-title" style="font-size:1.5rem; margin:0; color:var(--text-main);"></h1>
                 </div>
                 <div style="display:flex; gap:10px;">
-                    <button id="btn-toggle-index" class="btn btn-outline" onclick="toggleIndex()">📚 Vis/Skjul Indeks</button>
+                    <button id="btn-toggle-index" class="btn btn-outline" onclick="toggleIndex()">📚 Innhold</button>
                     <button id="edit-toggle-btn" class="btn btn-primary edit-only" onclick="toggleEdit()">🖋️ Rediger Split-View</button>
                     <button id="btn-delete-article" class="btn btn-danger edit-only" onclick="deleteCurrentArticle()">Slett Artikkel</button>
                 </div>
@@ -2036,6 +2036,7 @@
         setTimeout(function(){
             if(window.renderMathInElement&&katexReady) renderMathInElement(display,KATEX_CONFIG);
             if(window.Prism) Prism.highlightAllUnder(display);
+            buildTOC();
         },50);
         p5LoadTimeout=setTimeout(function(){
             animCodes.forEach(function(code,idx){
@@ -2078,24 +2079,51 @@
         return html;
     }
 
-    // ── RELATED WORDS ────────────────────────────────────────────────
+    // ── TABLE OF CONTENTS ──────────────────────────────────────────
     function updateRelatedWordsList(currentFile){
-        var listEl=document.getElementById('related-words-list'); listEl.innerHTML="";
-        if(!currentFile||!currentFile.content){listEl.innerHTML='<div style="padding:15px 10px;font-size:12px;color:var(--text-muted);font-style:italic;">Ingen data tilgjengelig.</div>';return;}
-        var content=currentFile.content.toLowerCase(); var found=0;
-        getAllFiles(db).forEach(function(p){
-            if(!p||p.id===currentFile.id) return;
-            var terms=[p.name];
-            if(p.aliases) terms.push.apply(terms,p.aliases.split(/[,/]/).map(function(s){return s.trim();}).filter(function(s){return s.length>0;}));
-            if(terms.some(function(t){return t&&content.includes(t.toLowerCase());})){
-                found++;
-                var d=document.createElement('div'); d.className="tree-item related";
-                d.innerHTML='<span>📄</span><strong>'+sanitizeHTML(p.name)+'</strong>';
-                d.onclick=function(){openQuickView(p.id);}; listEl.appendChild(d);
-            }
-        });
-        if(found===0) listEl.innerHTML='<div style="padding:15px 10px;font-size:12px;color:var(--text-muted);font-style:italic;">Ingen referanser funnet.</div>';
+        buildTOC();
     }
+
+    function buildTOC(){
+        var listEl = document.getElementById('related-words-list');
+        listEl.innerHTML = '';
+        var display = document.getElementById('article-display');
+        if(!display){ listEl.innerHTML='<div style="padding:15px 10px;font-size:12px;color:var(--text-muted);font-style:italic;">Ingen innhold.</div>'; return; }
+
+        var headings = display.querySelectorAll('h1,h2,h3,h4');
+        if(headings.length === 0){
+            listEl.innerHTML='<div style="padding:15px 10px;font-size:12px;color:var(--text-muted);font-style:italic;">Ingen seksjoner funnet. Bruk ## overskrifter i teksten.</div>';
+            return;
+        }
+
+        headings.forEach(function(h, i){
+            var anchorId = 'toc-section-' + i;
+            h.id = anchorId;
+            var level = parseInt(h.tagName.replace('H',''));
+            var indent = (level - 1) * 10;
+            var icon = level === 1 ? '◆' : level === 2 ? '◇' : '·';
+            var fontSize = level === 1 ? '13px' : level === 2 ? '12px' : '11px';
+            var fontWeight = level <= 2 ? '600' : '400';
+            var color = level === 1 ? 'var(--text-main)' : level === 2 ? 'var(--blue)' : 'var(--text-muted)';
+            var d = document.createElement('div');
+            d.style.cssText = 'display:flex;align-items:flex-start;gap:6px;padding:5px 8px;padding-left:' + (8 + indent) + 'px;border-radius:6px;cursor:pointer;transition:background 0.15s;';
+            d.innerHTML = '<span style="color:' + color + ';flex-shrink:0;margin-top:1px;font-size:10px;">' + icon + '</span>'
+                + '<span style="font-size:' + fontSize + ';font-weight:' + fontWeight + ';color:' + color + ';line-height:1.4;">' + sanitizeHTML(h.textContent) + '</span>';
+            d.onmouseenter = function(){ this.style.background = 'var(--card-bg)'; };
+            d.onmouseleave = function(){ this.style.background = 'transparent'; };
+            (function(id){ d.onclick = function(){
+                var target = document.getElementById(id);
+                if(target){
+                    target.scrollIntoView({ behavior:'smooth', block:'start' });
+                    target.style.transition = 'background 0.3s';
+                    target.style.background = 'rgba(88,166,255,0.15)';
+                    setTimeout(function(){ target.style.background = ''; }, 900);
+                }
+            }; })(anchorId);
+            listEl.appendChild(d);
+        });
+    }
+
 
     // ── BREADCRUMBS & SIDEBAR ────────────────────────────────────────
     function renderBreadcrumbs(){
