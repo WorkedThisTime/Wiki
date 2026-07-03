@@ -986,7 +986,26 @@
             blocks[id] = { type: 'widget', code: code.trim() };
             return '\n\n<div class="wiki-widget-wrapper" id="wrap-' + id + '"><div class="wiki-widget-inner" id="' + id + '"></div></div>\n\nBLOCK_PLACEHOLDER_' + id + '\n\n';
         });
+        // Beskytt LaTeX mot Marked.js (hindrer _ fra å bli kursiv inne i formler)
+        var mathPlaceholders = {};
+        var mathCounter = 0;
+        // Beskytt $$ ... $$ (display) først
+        mdText = mdText.replace(/\$\$([\s\S]*?)\$\$/g, function(match) {
+            var key = 'MATHBLOCK_' + (mathCounter++) + '_END';
+            mathPlaceholders[key] = match;
+            return key;
+        });
+        // Beskytt $ ... $ (inline)
+        mdText = mdText.replace(/\$([^\$\n]+?)\$/g, function(match) {
+            var key = 'MATHBLOCK_' + (mathCounter++) + '_END';
+            mathPlaceholders[key] = match;
+            return key;
+        });
         var html = marked.parse(mdText);
+        // Gjenopprett LaTeX-blokker etter Marked
+        Object.keys(mathPlaceholders).forEach(function(key) {
+            html = html.split(key).join(mathPlaceholders[key]);
+        });
         html = html.replace(/<p>BLOCK_PLACEHOLDER_(sci-block-\d+)<\/p>/g, '');
         return { html: html, blocks: blocks };
     }
