@@ -768,7 +768,7 @@
 <div class="main-wrapper">
     <div id="sidebar-overlay" onclick="closeMobileSidebar()"></div>
     <div class="sidebar">
-        <div class="sidebar-section">
+        <div class="sidebar-section" id="explorer-section">
             <div class="sidebar-title">Utforsker</div>
             <div id="sidebar-tree"></div>
         </div>
@@ -1910,6 +1910,9 @@
         document.querySelector('.sidebar').style.display=isSidebarVisible?"flex":"none";
         renderSidebarTree(); renderBreadcrumbs();
         var inDocument = currentItem.type !== "folder";
+        // Skjul utforsker-seksjonen når man er i et dokument
+        var explorerSection = document.getElementById('explorer-section');
+        if(explorerSection) explorerSection.style.display = inDocument ? 'none' : '';
         // Utforsker-knapp: grå ut når man er i et dokument
         var explorerBtn = document.getElementById('btn-back-explorer');
         if(explorerBtn){
