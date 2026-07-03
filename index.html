@@ -994,7 +994,6 @@
     // ── RIK EDITOR MED EKTE FANE-BOKSER ───────────────────────────────
     // Modell: array av segmenter. Hvert segment er enten {type:'text', value} eller {type:'tabs', steps:[{title,content}]}
     var richSegments = [];
-    var richSegmentsCache = { 1: null, 2: null, fileId: null };
 
     function parseToSegments(text){
         var segments = [];
@@ -2015,16 +2014,9 @@
             var ta = document.getElementById('text-edit-area');
             // Bare last innhold hvis editoren ikke allerede er lastet for denne filen
             if(ta && !ta.dataset.loaded){
-                // Pre-cache begge sider slik at bytte er øyeblikkelig
-                richSegmentsCache.fileId = file.id || '';
-                richSegmentsCache[1] = parseToSegments(file.content || '');
-                richSegmentsCache[2] = parseToSegments(file.content2 || '');
-                var pageContent = currentEditorPage === 2 ? (file.content2||"") : (file.content||"");
-                ta.value = validateString(pageContent, CONFIG.MAX_CONTENT_LENGTH);
+                ta.value = validateString(file.content||"", CONFIG.MAX_CONTENT_LENGTH);
                 ta.dataset.loaded = '1';
-                richSegments = richSegmentsCache[currentEditorPage];
-                renderRichEditor();
-                syncHiddenTextarea();
+                loadRichEditor(ta.value);
             }
             renderAnimSlots(getAnimCodes(file));
             document.getElementById('edit-toggle-btn').innerHTML="Lukk Redigering";
@@ -2084,10 +2076,26 @@
             p5Instances[containerId]=new p5(function(p){
                 p.createCanvas=function(w,h,r){var c=p.constructor.prototype.createCanvas.call(p,w,h,r);c.parent(containerId);return c;};
                 var rawCode=code.replace(/function\s+setup\s*\(/g,'p.setup = function(').replace(/function\s+draw\s*\(/g,'p.draw = function(');
+                // Begrens frameRate automatisk for å spare CPU
+                if(!/frameRate\s*\(/.test(rawCode)){
+                    rawCode = rawCode.replace(/(p\.setup\s*=\s*function\s*\(\)\s*\{)/, '$1 p.frameRate(30);');
+                }
                 var safeCode='try{'+rawCode+'if(typeof p.draw===\'function\'){const _o=p.draw;p.draw=function(){try{_o();}catch(err){p.noLoop();const el=document.getElementById(\''+containerId+'\');if(el)el.innerHTML=\'<div class="animation-error">❌ \'+err.message+\'</div>\';}}}}catch(err){throw err;}';
                 new Function('p',safeCode)(p);
             },container);
         }catch(e){container.innerHTML='<div class="animation-error">❌ Syntaksfeil:<br>'+sanitizeHTML(e.message)+'</div>';}
+        // Pause animasjonen når den ikke er synlig (spar CPU)
+        if(p5Instances[containerId] && 'IntersectionObserver' in window){
+            var obs = new IntersectionObserver(function(entries){
+                entries.forEach(function(entry){
+                    var inst = p5Instances[containerId];
+                    if(!inst) return;
+                    try{ if(entry.isIntersecting){ inst.loop(); } else { inst.noLoop(); } }catch(e){}
+                });
+            }, {threshold: 0.1});
+            var el = document.getElementById(containerId);
+            if(el) obs.observe(el);
+        }
     }
 
     // ── WIKI LINKS ───────────────────────────────────────────────────
@@ -2215,13 +2223,7 @@
             f.content2 = validateString(document.getElementById('text-edit-area').value, CONFIG.MAX_CONTENT_LENGTH);
         }
         currentEditorPage = n;
-        // Bruk cache hvis tilgjengelig, ellers parse
-        if(richSegmentsCache.fileId === (f.id||'') && richSegmentsCache[n] !== null){
-            richSegments = richSegmentsCache[n];
-        } else {
-            richSegments = parseToSegments(n === 1 ? (f.content || '') : (f.content2 || ''));
-            richSegmentsCache[n] = richSegments;
-        }
+        richSegments = parseToSegments(n === 1 ? (f.content || '') : (f.content2 || ''));
         renderRichEditor();
         syncHiddenTextarea();
         document.getElementById('editor-page-btn-1').className = n===1 ? 'btn btn-primary' : 'btn btn-outline';
@@ -2309,7 +2311,7 @@
         }
     }
     function goHome(){currentPath=[db];isEditing=false;document.body.classList.remove('is-editing');render();}
-    function goBack(){if(currentPath.length>1){currentPath.pop();isEditing=false;document.body.classList.remove('is-editing');render();}}
+    function goBack(){ destroyAllP5();if(currentPath.length>1){currentPath.pop();isEditing=false;document.body.classList.remove('is-editing');render();}}
 
     function createNew(type){
         var name=prompt(type==='folder'?'Mappenavn:':'Artikkelnavn:');
@@ -2382,7 +2384,16 @@
         draggedItemId=null; saveToDatabase(); render(); showToast('✅ Flyttet','success');
     }
 
+    function destroyAllP5(){
+        if(p5LoadTimeout){ clearTimeout(p5LoadTimeout); p5LoadTimeout=null; }
+        Object.values(p5Instances).forEach(function(inst){
+            try{ inst.noLoop(); inst.remove(); }catch(e){}
+        });
+        p5Instances={};
+    }
+
     function navigateToId(id){
+        destroyAllP5();
         var path=[];
         var search=function(node,p){ if(!node) return false; if(node.id===id){path=[].concat(p,[node]);return true;} if(Array.isArray(node.children)){for(var i=0;i<node.children.length;i++){if(search(node.children[i],[].concat(p,[node]))) return true;}} return false; };
         if(search(db,[])){currentPath=path;isEditing=false;document.body.classList.remove('is-editing');closeSearch();closeQuickView();render();}
