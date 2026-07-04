@@ -163,6 +163,18 @@
         .toast { background: var(--toast-bg); color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 13px; font-weight: 500; animation: slideInRight 0.3s cubic-bezier(0.16,1,0.3,1) forwards; opacity: 0; transform: translateX(100%); display: flex; align-items: center; gap: 10px; }
         @keyframes slideInRight { to { opacity: 1; transform: translateX(0); } }
 
+        #formula-panel { position: fixed; top: 0; left: -480px; width: 460px; height: 100vh; background: var(--header-bg); backdrop-filter: blur(20px); border-right: 1px solid var(--border); z-index: 6000; transition: 0.4s cubic-bezier(0.16,1,0.3,1); padding: 32px 28px; overflow-y: auto; box-shadow: 10px 0 40px rgba(0,0,0,0.5); display:flex; flex-direction:column; gap:16px; }
+        #formula-panel.open { left: 0; }
+        .katex-clickable { cursor: pointer; border-radius: 4px; transition: background 0.15s; }
+        .katex-clickable:hover { background: rgba(91,143,255,0.15); outline: 2px solid rgba(91,143,255,0.4); }
+        .katex-clickable.active { background: rgba(91,143,255,0.22); outline: 2px solid rgba(91,143,255,0.7); }
+        #formula-panel .fp-label { color: var(--blue); font-weight: 700; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+        #formula-panel .fp-formula { background: rgba(91,143,255,0.07); border: 1px solid rgba(91,143,255,0.2); border-radius: 8px; padding: 14px; overflow-x: auto; }
+        #formula-panel .fp-answer { font-size: 14px; line-height: 1.7; color: var(--text-main); white-space: pre-wrap; }
+        #formula-panel .fp-loading { display:flex; align-items:center; gap:10px; color: var(--text-muted); font-size:13px; }
+        #formula-panel .fp-dot { width:7px; height:7px; border-radius:50%; background:var(--blue); animation: fpdot 1s infinite alternate; }
+        #formula-panel .fp-dot:nth-child(2){animation-delay:.2s;} #formula-panel .fp-dot:nth-child(3){animation-delay:.4s;}
+        @keyframes fpdot { from{opacity:.2;transform:scale(.8)} to{opacity:1;transform:scale(1.2)} }
         #quickview-panel { position: fixed; top: 0; right: -500px; width: var(--panel-width); height: 100vh; background: var(--header-bg); backdrop-filter: blur(20px); border-left: 1px solid var(--border); z-index: 6000; transition: 0.4s cubic-bezier(0.16,1,0.3,1); padding: 40px; overflow-y: auto; box-shadow: -10px 0 40px rgba(0,0,0,0.5); }
         #quickview-panel.open { right: 0; }
         #qv-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 5999; display: none; backdrop-filter: blur(2px); pointer-events: none; }
@@ -518,6 +530,17 @@
     <h1 id="qv-title" style="margin-bottom:20px; font-size:2rem;"></h1>
     <div id="qv-body" style="color:var(--text-main); line-height:1.6; font-size:15px;"></div>
     <button id="qv-full-btn" class="btn btn-primary" style="width:100%; margin-top:30px; justify-content:center;">Åpne artikkel →</button>
+</div>
+
+<div id="formula-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span class="fp-label">🔢 Formelforklaring</span>
+        <button class="icon-btn" onclick="closeFormulaPanel()" style="padding:5px 10px;">Lukk ×</button>
+    </div>
+    <div class="fp-formula" id="fp-formula-display"></div>
+    <div id="fp-content">
+        <div style="color:var(--text-muted);font-size:13px;font-style:italic;">Klikk på en formel i dokumentet for å få en forklaring.</div>
+    </div>
 </div>
 
 <!-- SYSTEM MODAL -->
@@ -2176,14 +2199,6 @@
 
     // ── WIKI LINKS ───────────────────────────────────────────────────
     function injectWikiLinks(html,currentFileId){
-        // Beskytt innhold inni <a>-tagger mot wiki-link injeksjon
-        var aPlaceholders = {};
-        var aCounter = 0;
-        html = html.replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, function(match) {
-            var key = 'ABLOCK_' + (aCounter++) + '_END';
-            aPlaceholders[key] = match;
-            return key;
-        });
         var allPages=getAllFiles(db).sort(function(a,b){return (b.name||'').length-(a.name||'').length;});
         allPages.forEach(function(page){
             if(!page||page.id===currentFileId) return;
@@ -2192,12 +2207,8 @@
             Array.from(new Set(kw)).forEach(function(word){
                 if(word.length<1) return;
                 html=html.replace(new RegExp('(\\$\\$[\\s\\S]*?\\$\\$|\\\\\\[[\\s\\S]*?\\\\\\]|\\$[^$]+?\\$|\\\\\\([\\s\\S]*?\\\\\\)|<[^>]+>)|\\b('+escapeRegExp(word)+')\\b','gi'),
-                    function(m,ign){return ign?ign:'<span class="wiki-link" onclick="openQuickView(\''+sanitizeHTML(page.id)+'\')">' +m+'</span>';});
+                    function(m,ign){return ign?ign:'<span class="wiki-link" onclick="openQuickView(\''+sanitizeHTML(page.id)+'\')">'+m+'</span>';});
             });
-        });
-        // Gjenopprett <a>-tagger
-        Object.keys(aPlaceholders).forEach(function(key) {
-            html = html.split(key).join(aPlaceholders[key]);
         });
         return html;
     }
@@ -2631,6 +2642,78 @@
         document.getElementById('qv-overlay').style.display="flex"; document.getElementById('qv-overlay').classList.add('active');
         setTimeout(function(){if(window.renderMathInElement&&katexReady) renderMathInElement(bodyEl,KATEX_CONFIG);},50);
     }
+    function openFormulaPanel(latex, sourceEl) {
+        // Deaktiver forrige aktive formel
+        var prev = document.querySelector('.katex-clickable.active');
+        if(prev) prev.classList.remove('active');
+        if(sourceEl) sourceEl.classList.add('active');
+
+        // Vis formelen i panelet
+        var formulaDisplay = document.getElementById('fp-formula-display');
+        formulaDisplay.innerHTML = '';
+        if(window.katex) {
+            try {
+                katex.render(latex, formulaDisplay, { throwOnError: false, displayMode: true });
+            } catch(e) {
+                formulaDisplay.textContent = latex;
+            }
+        } else {
+            formulaDisplay.textContent = latex;
+        }
+
+        // Vis loading
+        var content = document.getElementById('fp-content');
+        content.innerHTML = '<div class="fp-loading"><div class="fp-dot"></div><div class="fp-dot"></div><div class="fp-dot"></div><span>Forklarer formelen...</span></div>';
+        document.getElementById('formula-panel').classList.add('open');
+
+        // Hent forklaring fra Claude API
+        fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: 'claude-sonnet-4-6',
+                max_tokens: 1000,
+                system: 'Du er en hjelpsom lærer for en norsk vitenskapswiki. Forklar matematiske formler på norsk bokmål. Vær kort og tydelig – maks 5 setninger. Forklar hva formelen betyr, hvilke symboler som inngår, og gjerne ett praktisk eksempel. Ikke bruk LaTeX i svaret, skriv symboler som vanlig tekst (f.eks. F for kraft, m for masse). Svar kun med forklaringen, ingen innledning.',
+                messages: [{ role: 'user', content: 'Forklar denne formelen: ' + latex }]
+            })
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            var text = (data.content && data.content[0] && data.content[0].text) || 'Kunne ikke hente forklaring.';
+            content.innerHTML = '<div class="fp-answer">' + sanitizeHTML(text) + '</div>';
+        })
+        .catch(function(){
+            content.innerHTML = '<div class="fp-answer" style="color:var(--text-muted);">Kunne ikke koble til forklaringstjenesten.</div>';
+        });
+    }
+
+    function closeFormulaPanel() {
+        document.getElementById('formula-panel').classList.remove('open');
+        var prev = document.querySelector('.katex-clickable.active');
+        if(prev) prev.classList.remove('active');
+    }
+
+    function makeFormulasClickable(container) {
+        // Gjør alle KaTeX-formler klikkbare
+        container.querySelectorAll('.katex-display, .katex:not(.katex-display .katex)').forEach(function(el) {
+            // Hent LaTeX-kilde fra KaTeX sin annotation
+            var annotation = el.querySelector('annotation[encoding="application/x-tex"]');
+            if(!annotation) return;
+            var latex = annotation.textContent.trim();
+            if(!latex) return;
+
+            // Finn wrapper-elementet
+            var wrapper = el.closest('.katex-display') || el;
+            if(wrapper.classList.contains('katex-clickable')) return; // Allerede behandlet
+            wrapper.classList.add('katex-clickable');
+            wrapper.title = 'Klikk for forklaring';
+            wrapper.addEventListener('click', function(e) {
+                e.stopPropagation();
+                openFormulaPanel(latex, wrapper);
+            });
+        });
+    }
+
     function closeQuickView(){document.getElementById('quickview-panel').classList.remove('open');document.getElementById('qv-overlay').style.display="none";}
     function updateConnectionStatus(text,color){document.getElementById('status-text').innerText=text;document.getElementById('status-dot').style.background=color;}
     function toggleTheme(){document.body.classList.toggle('light-theme');localStorage.setItem('theme',document.body.classList.contains('light-theme')?'light':'dark');}
