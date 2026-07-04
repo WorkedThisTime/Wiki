@@ -1031,9 +1031,16 @@
             return key;
         });
         var html = marked.parse(mdText);
-        // Gjenopprett LaTeX-blokker etter Marked
+        // Gjenopprett LaTeX-blokker etter Marked, pakk inn med data-latex
         Object.keys(mathPlaceholders).forEach(function(key) {
-            html = html.split(key).join(mathPlaceholders[key]);
+            var orig = mathPlaceholders[key];
+            var isDisplay = orig.startsWith('$$');
+            var latex = isDisplay ? orig.slice(2,-2).trim() : orig.slice(1,-1).trim();
+            var safe = latex.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+            var wrapped = isDisplay
+                ? '<span class="math-clickable" data-latex="' + safe + '" data-display="1">' + orig + '</span>'
+                : '<span class="math-clickable" data-latex="' + safe + '">' + orig + '</span>';
+            html = html.split(key).join(wrapped);
         });
         html = html.replace(/<p>BLOCK_PLACEHOLDER_(sci-block-\d+)<\/p>/g, '');
         return { html: html, blocks: blocks };
@@ -2733,18 +2740,15 @@
     }
 
     function makeFormulasClickable(container){
-        container.querySelectorAll('.katex-display, .katex:not(.katex-display .katex)').forEach(function(el){
-            var annotation = el.querySelector('annotation[encoding="application/x-tex"]');
-            if(!annotation) return;
-            var latex = annotation.textContent.trim();
+        container.querySelectorAll('.math-clickable').forEach(function(el){
+            if(el.classList.contains('katex-clickable')) return;
+            var latex = el.getAttribute('data-latex');
             if(!latex) return;
-            var wrapper = el.closest('.katex-display') || el;
-            if(wrapper.classList.contains('katex-clickable')) return;
-            wrapper.classList.add('katex-clickable');
-            wrapper.title = 'Klikk for forklaring';
-            wrapper.addEventListener('click', function(e){
+            el.classList.add('katex-clickable');
+            el.title = 'Klikk for forklaring';
+            el.addEventListener('click', function(e){
                 e.stopPropagation();
-                openFormulaPanel(latex, wrapper);
+                openFormulaPanel(latex, el);
             });
         });
     }
