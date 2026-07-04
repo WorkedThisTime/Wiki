@@ -3796,7 +3796,6 @@
 
     function initializeApp(){
         checkKaTeXReady();
-        loadFormulaDict();
         // Tema er låst til mørk modus
         if(localStorage.getItem('viewMode')==='mobile'){
             document.body.classList.add('force-mobile');
@@ -3805,7 +3804,7 @@
             var leftBtns = document.getElementById('header-left-btns');
             if(leftBtns) leftBtns.style.display = 'none';
         }
-        initializeDatabase(); updateClock(); setInterval(updateClock,1000); render();
+        initializeDatabase(); loadFormulaDict(); updateClock(); setInterval(updateClock,1000); render();
         checkLock();
         initAuth();
         window.addEventListener('resize', function(){
