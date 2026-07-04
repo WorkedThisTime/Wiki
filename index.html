@@ -2120,15 +2120,11 @@
         display.innerHTML = html;
         executeBlocks(display, result.blocks);
         resolveDbImages(display);
-        if(katexReady){
-            // KaTeX allerede klar — render med en gang
-            try{ renderMathInElement(display, KATEX_CONFIG); }catch(e){}
+        setTimeout(function(){
+            if(window.renderMathInElement&&katexReady) renderMathInElement(display,KATEX_CONFIG);
             if(window.Prism) Prism.highlightAllUnder(display);
             buildTOC();
-        } else {
-            // KaTeX ikke klar ennå — lagre element og render når det er klart
-            _pendingRenderEl = display;
-        }
+        },50);
         p5LoadTimeout=setTimeout(function(){
             // Finn kun animasjoner som faktisk er referert på denne siden
             var animRefs = {};
@@ -2180,6 +2176,14 @@
 
     // ── WIKI LINKS ───────────────────────────────────────────────────
     function injectWikiLinks(html,currentFileId){
+        // Beskytt innhold inni <a>-tagger mot wiki-link injeksjon
+        var aPlaceholders = {};
+        var aCounter = 0;
+        html = html.replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, function(match) {
+            var key = 'ABLOCK_' + (aCounter++) + '_END';
+            aPlaceholders[key] = match;
+            return key;
+        });
         var allPages=getAllFiles(db).sort(function(a,b){return (b.name||'').length-(a.name||'').length;});
         allPages.forEach(function(page){
             if(!page||page.id===currentFileId) return;
@@ -2188,8 +2192,12 @@
             Array.from(new Set(kw)).forEach(function(word){
                 if(word.length<1) return;
                 html=html.replace(new RegExp('(\\$\\$[\\s\\S]*?\\$\\$|\\\\\\[[\\s\\S]*?\\\\\\]|\\$[^$]+?\\$|\\\\\\([\\s\\S]*?\\\\\\)|<[^>]+>)|\\b('+escapeRegExp(word)+')\\b','gi'),
-                    function(m,ign){return ign?ign:'<span class="wiki-link" onclick="openQuickView(\''+sanitizeHTML(page.id)+'\')">'+m+'</span>';});
+                    function(m,ign){return ign?ign:'<span class="wiki-link" onclick="openQuickView(''+sanitizeHTML(page.id)+'')">'+m+'</span>';});
             });
+        });
+        // Gjenopprett <a>-tagger
+        Object.keys(aPlaceholders).forEach(function(key) {
+            html = html.split(key).join(aPlaceholders[key]);
         });
         return html;
     }
@@ -2644,9 +2652,7 @@
     function exportData(){var a=document.createElement('a');a.href="data:text/json;charset=utf-8,"+encodeURIComponent(safeJSONStringify(db));a.download='wiki-backup-'+Date.now()+'.json';a.click();showToast('✅ Eksportert','success');}
     function importData(event){ var file=event.target.files&&event.target.files[0]; if(!file) return; var reader=new FileReader(); reader.onload=function(e){ var imported=safeJSONParse(e.target.result); if(!imported){showToast('❌ Ugyldig format','error');return;} if(!confirm('Erstatt all data?')) return; db=imported;currentPath=[db];isEditing=false;saveToDatabase();render();showToast('✅ Data importert','success'); }; reader.readAsText(file); }
     function updateClock(){document.getElementById('clock').innerText=new Date().toLocaleTimeString('no-NO',{hour:'2-digit',minute:'2-digit'});}
-    function checkKaTeXReady(){if(window.renderMathInElement&&window.katex){ katexReady=true; flushPendingRender(); } else setTimeout(checkKaTeXReady,100);}
-    var _pendingRenderEl = null;
-    function flushPendingRender(){ if(_pendingRenderEl){ try{ renderMathInElement(_pendingRenderEl, KATEX_CONFIG); }catch(e){} if(window.Prism) Prism.highlightAllUnder(_pendingRenderEl); buildTOC(); _pendingRenderEl=null; } }
+    function checkKaTeXReady(){if(window.renderMathInElement&&window.katex) katexReady=true; else setTimeout(checkKaTeXReady,100);}
 
     // ── EKSPORTER MAPPESTRUKTUR (TXT) ────────────────────────────────
     function exportStructureTree(){
