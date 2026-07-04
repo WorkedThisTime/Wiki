@@ -2656,7 +2656,10 @@
         document.getElementById('qv-full-btn').onclick=function(){navigateToId(id);};
         document.getElementById('quickview-panel').classList.add('open');
         document.getElementById('qv-overlay').style.display="flex"; document.getElementById('qv-overlay').classList.add('active');
-        setTimeout(function(){if(window.renderMathInElement&&katexReady) renderMathInElement(bodyEl,KATEX_CONFIG);},50);
+        setTimeout(function(){
+            if(window.renderMathInElement&&katexReady) renderMathInElement(bodyEl,KATEX_CONFIG);
+            makeFormulasClickable(bodyEl);
+        },50);
     }
     // ── FORMELORDBOK ──────────────────────────────────────────────────
     var formulaDict = {}; // { latexKey: forklaring }
@@ -2740,18 +2743,23 @@
     }
 
     function makeFormulasClickable(container){
+        // Bare legg til cursor/title styling — klikkhåndtering er via delegering
         container.querySelectorAll('.math-clickable').forEach(function(el){
-            if(el.classList.contains('katex-clickable')) return;
-            var latex = el.getAttribute('data-latex');
-            if(!latex) return;
             el.classList.add('katex-clickable');
             el.title = 'Klikk for forklaring';
-            el.addEventListener('click', function(e){
-                e.stopPropagation();
-                openFormulaPanel(latex, el);
-            });
         });
     }
+
+    // Én global event-delegering — fanger klikk uansett timing og re-render
+    document.addEventListener('click', function(e){
+        var el = e.target.closest('.math-clickable, .katex-clickable');
+        if(!el) return;
+        var latex = el.getAttribute('data-latex');
+        if(!latex) return;
+        e.stopPropagation();
+        try { latex = latex.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>'); } catch(ex){}
+        openFormulaPanel(latex, el);
+    });
 
     function closeQuickView(){document.getElementById('quickview-panel').classList.remove('open');document.getElementById('qv-overlay').style.display="none";}
     function updateConnectionStatus(text,color){document.getElementById('status-text').innerText=text;document.getElementById('status-dot').style.background=color;}
