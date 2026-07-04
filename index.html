@@ -2157,8 +2157,7 @@
         executeBlocks(display, result.blocks);
         resolveDbImages(display);
         setTimeout(function(){
-            if(window.renderMathInElement&&katexReady){
-                renderMathInElement(display,KATEX_CONFIG);
+            if(katexReady || window.katex){
                 makeFormulasClickable(display);
             }
             if(window.Prism) Prism.highlightAllUnder(display);
@@ -2657,8 +2656,7 @@
         document.getElementById('quickview-panel').classList.add('open');
         document.getElementById('qv-overlay').style.display="flex"; document.getElementById('qv-overlay').classList.add('active');
         setTimeout(function(){
-            if(window.renderMathInElement&&katexReady) renderMathInElement(bodyEl,KATEX_CONFIG);
-            makeFormulasClickable(bodyEl);
+            if(window.katex||katexReady) makeFormulasClickable(bodyEl);
         },50);
     }
     // ── FORMELORDBOK ──────────────────────────────────────────────────
@@ -2743,10 +2741,19 @@
     }
 
     function makeFormulasClickable(container){
-        // Bare legg til cursor/title styling — klikkhåndtering er via delegering
+        if(!window.katex) return;
         container.querySelectorAll('.math-clickable').forEach(function(el){
+            if(el.classList.contains('katex-clickable')) return;
             el.classList.add('katex-clickable');
             el.title = 'Klikk for forklaring';
+            var latex = el.getAttribute('data-latex') || '';
+            // Dekod HTML-entiteter
+            latex = latex.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+            var isDisplay = el.hasAttribute('data-display');
+            try {
+                katex.render(latex, el, { throwOnError: false, displayMode: isDisplay,
+                    macros: {"\\vec":"\\mathbf{#1}", "\\Sigma":"\\sum"} });
+            } catch(e) {}
         });
     }
 
@@ -2757,7 +2764,7 @@
         var latex = el.getAttribute('data-latex');
         if(!latex) return;
         e.stopPropagation();
-        try { latex = latex.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>'); } catch(ex){}
+        latex = latex.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
         openFormulaPanel(latex, el);
     });
 
