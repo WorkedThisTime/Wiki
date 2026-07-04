@@ -2192,7 +2192,7 @@
             Array.from(new Set(kw)).forEach(function(word){
                 if(word.length<1) return;
                 html=html.replace(new RegExp('(\\$\\$[\\s\\S]*?\\$\\$|\\\\\\[[\\s\\S]*?\\\\\\]|\\$[^$]+?\\$|\\\\\\([\\s\\S]*?\\\\\\)|<[^>]+>)|\\b('+escapeRegExp(word)+')\\b','gi'),
-                    function(m,ign){return ign?ign:'<span class="wiki-link" onclick="openQuickView(''+sanitizeHTML(page.id)+'')">'+m+'</span>';});
+                    function(m,ign){return ign?ign:'<span class="wiki-link" onclick="openQuickView(\''+sanitizeHTML(page.id)+'\')">' +m+'</span>';});
             });
         });
         // Gjenopprett <a>-tagger
