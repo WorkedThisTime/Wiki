@@ -2771,8 +2771,6 @@
     function importData(event){ var file=event.target.files&&event.target.files[0]; if(!file) return; var reader=new FileReader(); reader.onload=function(e){ var imported=safeJSONParse(e.target.result); if(!imported){showToast('❌ Ugyldig format','error');return;} if(!confirm('Erstatt all data?')) return; db=imported;currentPath=[db];isEditing=false;saveToDatabase();render();showToast('✅ Data importert','success'); }; reader.readAsText(file); }
     function updateClock(){document.getElementById('clock').innerText=new Date().toLocaleTimeString('no-NO',{hour:'2-digit',minute:'2-digit'});}
     function checkKaTeXReady(){if(window.renderMathInElement&&window.katex){ katexReady=true; } else setTimeout(checkKaTeXReady,100);}
-    // Last formelordbok ved oppstart
-    loadFormulaDict();
 
     // ── EKSPORTER MAPPESTRUKTUR (TXT) ────────────────────────────────
     function exportStructureTree(){
@@ -3798,6 +3796,7 @@
 
     function initializeApp(){
         checkKaTeXReady();
+        loadFormulaDict();
         // Tema er låst til mørk modus
         if(localStorage.getItem('viewMode')==='mobile'){
             document.body.classList.add('force-mobile');
