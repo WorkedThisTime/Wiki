@@ -2687,7 +2687,9 @@
         var body = document.getElementById('fp-body');
         var explanation = formulaDict[currentFormulaKey];
         if(explanation){
-            body.innerHTML = '<div class="fp-answer">' + sanitizeHTML(explanation) + '</div>';
+            var rendered = customMarkdown(explanation);
+            body.innerHTML = '<div class="fp-answer">' + rendered.html + '</div>';
+            makeFormulasClickable(body);
         } else {
             body.innerHTML = '<div class="fp-empty">Ingen forklaring lagt til ennå.</div>';
         }
@@ -2719,7 +2721,10 @@
         formulaDict[currentFormulaKey] = text;
         firebase.database().ref('formulaDict/' + encodeFormulaKey(currentFormulaKey)).set(text).then(function(){
             showToast('Forklaring lagret!');
-            document.getElementById('fp-body').innerHTML = '<div class="fp-answer">' + sanitizeHTML(text) + '</div>';
+            var rendered = customMarkdown(text);
+            var body = document.getElementById('fp-body');
+            body.innerHTML = '<div class="fp-answer">' + rendered.html + '</div>';
+            makeFormulasClickable(body);
         });
     }
 
