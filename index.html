@@ -2706,7 +2706,7 @@
         // Vis redigeringsfelt kun for editor/admin
         var editorDiv = document.getElementById('fp-editor');
         var ta = document.getElementById('fp-textarea');
-        if(currentRole==='editor'||currentRole==='admin'){
+        if((currentRole==='editor'||currentRole==='admin') && !readModeActive){
             editorDiv.style.display = 'block';
             ta.value = explanation || '';
         } else {
