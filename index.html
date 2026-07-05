@@ -471,7 +471,7 @@
         #text-display img { max-width: 100%; border-radius: 6px; }
     </style>
 </head>
-<body onclick="closeSearch();">
+<body onclick="closeSearch(); handleFormulaPanelOutsideClick(event);">
 
 <!-- INNLOGGINGSSKJERM -->
 <div id="lock-screen" style="position:fixed;inset:0;background:#0d1117;display:flex;align-items:center;justify-content:center;z-index:99999;flex-direction:column;gap:0;">
@@ -2737,6 +2737,14 @@
         if(prev) prev.classList.remove('fp-active');
         currentFormulaKey = null;
         currentFormulaRawLatex = null;
+    }
+
+    function handleFormulaPanelOutsideClick(e){
+        var panel = document.getElementById('formula-panel');
+        if(!panel.classList.contains('open')) return;
+        if(panel.contains(e.target)) return;
+        if(e.target.closest('.math-clickable, .katex-clickable')) return;
+        closeFormulaPanel();
     }
 
     function copyFormulaLatex(){
