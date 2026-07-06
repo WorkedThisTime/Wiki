@@ -514,7 +514,6 @@
         <div style="padding:12px 16px;border-top:1px solid #30363d;display:flex;gap:8px;flex-wrap:wrap;">
             <button onclick="loadAdminUsers()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">🔄 Oppdater liste</button>
             <button onclick="cleanupOrphanedImages()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">🧹 Rydd opp ubrukte bilder</button>
-            <button onclick="migrateImagesToStorage()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">🚀 Migrer bilder til sky</button>
         </div>
     </div>
 </div>
@@ -1726,22 +1725,8 @@
         try {
             var result = await compressImage(file, 1200, 1200, 0.80);
             var savings = result.savedPct > 0 ? ' (' + result.savedPct + '% mindre)' : '';
-            var imgId = 'img-' + Date.now() + '-' + Math.random().toString(36).substr(2,6);
-            if(storage){
-                try{
-                    setUploadProgress(true, 'Laster opp' + savings + ' til sky...');
-                    var blob = await (await fetch(result.dataUrl)).blob();
-                    var ref = storage.ref('wiki-images/' + imgId + '.jpg');
-                    await ref.put(blob);
-                    var cloudUrl = await ref.getDownloadURL();
-                    setUploadProgress(false);
-                    showToast('✅ Bilde lagret i skyen!', 'success');
-                    return cloudUrl;
-                } catch(storageErr){
-                    console.error('Storage upload failed, falling back to database:', storageErr);
-                }
-            }
             setUploadProgress(true, 'Lagrer' + savings + '...');
+            var imgId = 'img-' + Date.now() + '-' + Math.random().toString(36).substr(2,6);
             await firebase.database().ref('wiki-images/' + imgId).set(result.dataUrl);
             setUploadProgress(false);
             showToast('✅ Bilde lagret!', 'success');
@@ -3845,77 +3830,6 @@
             showToast('🧹 Slettet ' + orphaned.length + ' ubrukte bilde(r)!', 'success');
         } catch(e){
             showToast('❌ Feil under opprydning: ' + (e.message||''), 'error');
-        }
-    }
-
-    function replaceImageRefsInTree(node, oldId, newUrl){
-        if(!node) return;
-        if(typeof node.content === 'string' && node.content.indexOf('db:'+oldId) !== -1){
-            node.content = node.content.split('db:'+oldId).join(newUrl);
-        }
-        if(typeof node.content2 === 'string' && node.content2.indexOf('db:'+oldId) !== -1){
-            node.content2 = node.content2.split('db:'+oldId).join(newUrl);
-        }
-        if(typeof node.thumbnail === 'string' && node.thumbnail === 'db:'+oldId){
-            node.thumbnail = newUrl;
-        }
-        if(Array.isArray(node.children)){
-            node.children.forEach(function(c){ replaceImageRefsInTree(c, oldId, newUrl); });
-        }
-    }
-
-    async function migrateImagesToStorage(){
-        if(currentRole !== 'admin') return;
-        if(!storage){ showToast('❌ Firebase Storage er ikke tilgjengelig.', 'error'); return; }
-        if(!confirm('Dette vil flytte alle bilder som ligger som tekst i databasen over til skylagring (Storage), og oppdatere alle referanser i artikler og formelforklaringer. Fortsette?')) return;
-        try{
-            showToast('🔍 Henter bilder fra databasen...', 'info');
-            var snap = await firebase.database().ref('wiki-images').once('value');
-            var all = snap.val() || {};
-            var ids = Object.keys(all).filter(function(id){
-                return typeof all[id] === 'string' && all[id].indexOf('data:') === 0;
-            });
-            if(ids.length === 0){
-                showToast('✅ Ingen database-bilder å migrere. Alt er allerede i skyen!', 'success');
-                return;
-            }
-            if(!confirm('Fant ' + ids.length + ' bilde(r) i databasen. Migrere til Storage nå?')) return;
-
-            var fdSnap = await firebase.database().ref('formulaDict').once('value');
-            var fd = fdSnap.val() || {};
-            var migrated = 0, failed = 0;
-
-            for(var i=0; i<ids.length; i++){
-                var id = ids[i];
-                showToast('⬆️ Migrerer bilde ' + (i+1) + ' av ' + ids.length + '...', 'info');
-                try{
-                    var blob = await (await fetch(all[id])).blob();
-                    var ref = storage.ref('wiki-images/' + id + '.jpg');
-                    await ref.put(blob);
-                    var cloudUrl = await ref.getDownloadURL();
-
-                    replaceImageRefsInTree(db, id, cloudUrl);
-                    Object.keys(fd).forEach(function(k){
-                        if(typeof fd[k] === 'string' && fd[k].indexOf('db:'+id) !== -1){
-                            fd[k] = fd[k].split('db:'+id).join(cloudUrl);
-                        }
-                    });
-
-                    await firebase.database().ref('wiki-images/' + id).remove();
-                    migrated++;
-                } catch(imgErr){
-                    console.error('Migration failed for image ' + id, imgErr);
-                    failed++;
-                }
-            }
-
-            saveToDatabase();
-            await firebase.database().ref('formulaDict').set(fd);
-            render();
-
-            showToast('✅ Migrerte ' + migrated + ' bilde(r)' + (failed > 0 ? ' (' + failed + ' feilet)' : '') + '!', 'success');
-        } catch(e){
-            showToast('❌ Feil under migrering: ' + (e.message||''), 'error');
         }
     }
 
