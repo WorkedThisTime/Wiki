@@ -3820,6 +3820,15 @@
         try{
             var used = new Set();
             collectUsedImageIds(db, used);
+            var fdSnap = await firebase.database().ref('formulaDict').once('value');
+            var fd = fdSnap.val() || {};
+            Object.keys(fd).forEach(function(k){
+                var text = fd[k];
+                if(typeof text === 'string'){
+                    var re2 = /db:([a-zA-Z0-9\-]+)/g, m3;
+                    while((m3 = re2.exec(text))) used.add(m3[1]);
+                }
+            });
             var snap = await firebase.database().ref('wiki-images').once('value');
             var all = snap.val() || {};
             var allIds = Object.keys(all);
