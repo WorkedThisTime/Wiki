@@ -511,8 +511,9 @@
             👁️ Leser = kan lese • ✏️ Redigerer = kan redigere • ⏳ Venter = ingen tilgang
         </div>
         <div id="admin-user-list" style="padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:4px;"></div>
-        <div style="padding:12px 16px;border-top:1px solid #30363d;">
+        <div style="padding:12px 16px;border-top:1px solid #30363d;display:flex;gap:8px;flex-wrap:wrap;">
             <button onclick="loadAdminUsers()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">🔄 Oppdater liste</button>
+            <button onclick="cleanupOrphanedImages()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">🧹 Rydd opp ubrukte bilder</button>
         </div>
     </div>
 </div>
@@ -1724,8 +1725,22 @@
         try {
             var result = await compressImage(file, 1200, 1200, 0.80);
             var savings = result.savedPct > 0 ? ' (' + result.savedPct + '% mindre)' : '';
-            setUploadProgress(true, 'Lagrer' + savings + '...');
             var imgId = 'img-' + Date.now() + '-' + Math.random().toString(36).substr(2,6);
+            if(storage){
+                try{
+                    setUploadProgress(true, 'Laster opp' + savings + ' til sky...');
+                    var blob = await (await fetch(result.dataUrl)).blob();
+                    var ref = storage.ref('wiki-images/' + imgId + '.jpg');
+                    await ref.put(blob);
+                    var cloudUrl = await ref.getDownloadURL();
+                    setUploadProgress(false);
+                    showToast('✅ Bilde lagret i skyen!', 'success');
+                    return cloudUrl;
+                } catch(storageErr){
+                    console.error('Storage upload failed, falling back to database:', storageErr);
+                }
+            }
+            setUploadProgress(true, 'Lagrer' + savings + '...');
             await firebase.database().ref('wiki-images/' + imgId).set(result.dataUrl);
             setUploadProgress(false);
             showToast('✅ Bilde lagret!', 'success');
@@ -3783,6 +3798,46 @@
     }
 
     // ── ADMIN PANEL ───────────────────────────────────────────────────
+    function collectUsedImageIds(node, used){
+        if(!node) return;
+        if(typeof node.content === 'string'){
+            var re = /db:([a-zA-Z0-9\-]+)/g, m;
+            while((m = re.exec(node.content))) used.add(m[1]);
+        }
+        if(typeof node.thumbnail === 'string'){
+            var m2 = /^db:([a-zA-Z0-9\-]+)/.exec(node.thumbnail);
+            if(m2) used.add(m2[1]);
+        }
+        if(Array.isArray(node.children)){
+            node.children.forEach(function(c){ collectUsedImageIds(c, used); });
+        }
+    }
+
+    async function cleanupOrphanedImages(){
+        if(currentRole !== 'admin') return;
+        if(!confirm('Dette vil søke gjennom hele wikien og permanent slette bilder i databasen som ikke lenger brukes noe sted. Fortsette?')) return;
+        showToast('🔍 Søker etter ubrukte bilder...', 'info');
+        try{
+            var used = new Set();
+            collectUsedImageIds(db, used);
+            var snap = await firebase.database().ref('wiki-images').once('value');
+            var all = snap.val() || {};
+            var allIds = Object.keys(all);
+            var orphaned = allIds.filter(function(id){ return !used.has(id); });
+            if(orphaned.length === 0){
+                showToast('✅ Ingen ubrukte bilder funnet. Databasen er ren!', 'success');
+                return;
+            }
+            if(!confirm('Fant ' + orphaned.length + ' ubrukte bilde(r) av ' + allIds.length + ' totalt. Slette dem?')) return;
+            for(var i=0; i<orphaned.length; i++){
+                await firebase.database().ref('wiki-images/' + orphaned[i]).remove();
+            }
+            showToast('🧹 Slettet ' + orphaned.length + ' ubrukte bilde(r)!', 'success');
+        } catch(e){
+            showToast('❌ Feil under opprydning: ' + (e.message||''), 'error');
+        }
+    }
+
     function openAdminPanel(){
         if(currentRole !== 'admin') return;
         document.getElementById('admin-modal').style.display = 'flex';
