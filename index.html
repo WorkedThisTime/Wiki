@@ -2565,7 +2565,7 @@
         }
     }
 
-    function deleteItem(e,id){ e.stopPropagation(); if(!confirm('Slette permanent?')) return; var parent=findParentById(db,id); parent.children.splice(parent.children.findIndex(function(c){return c.id===id;}),1); saveToDatabase(); render(); showToast('✅ Slettet','success'); }
+    function deleteItem(e,id){ e.stopPropagation(); var item=findItemById(db,id); if(item && item.type==='folder' && item.children && item.children.length>0){ showToast('❌ Mappen er ikke tom — flytt eller slett innholdet først','error'); return; } if(!confirm('Slette permanent?')) return; var parent=findParentById(db,id); parent.children.splice(parent.children.findIndex(function(c){return c.id===id;}),1); saveToDatabase(); render(); showToast('✅ Slettet','success'); }
     function deleteCurrentArticle(){ var file=currentPath[currentPath.length-1]; if(!confirm('Slette "'+sanitizeHTML(file.name)+'" permanent?')) return; var id=file.id; goBack(); var parent=findParentById(db,id); parent.children=parent.children.filter(function(c){return c.id!==id;}); saveToDatabase(); render(); showToast('✅ Slettet','success'); }
     function toggleKebab(e, menuId){
         e.stopPropagation();
