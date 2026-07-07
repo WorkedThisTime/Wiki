@@ -106,8 +106,17 @@
         .file-card:hover { background: var(--border); transform: translateY(-2px); }
         .file-meta { font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; }
 
-        .item-actions { position: absolute; top: 10px; right: 10px; display: flex; gap: 7px; opacity: 0; transition: 0.2s; }
+        .item-actions { position: absolute; top: 8px; right: 8px; opacity: 0; transition: 0.2s; }
         .card:hover .item-actions, .file-card:hover .item-actions { opacity: 1; }
+        .kebab-btn { background: rgba(0,0,0,0.55); color: white; border: none; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 16px; backdrop-filter: blur(4px); line-height:1; }
+        .kebab-btn:hover { background: var(--blue); }
+        .kebab-menu { position: absolute; top: 32px; right: 0; background: var(--header-bg); border: 1px solid var(--border); border-radius: 8px; min-width: 160px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 200; overflow: hidden; display: none; }
+        .kebab-menu.open { display: block; }
+        .kebab-item { display: flex; align-items: center; gap: 10px; padding: 9px 14px; font-size: 13px; color: var(--text-main); cursor: pointer; border: none; background: none; width: 100%; text-align: left; }
+        .kebab-item:hover { background: var(--border); }
+        .kebab-item.danger { color: var(--danger); }
+        .kebab-item.danger:hover { background: rgba(218,54,51,0.15); }
+        .kebab-sep { height: 1px; background: var(--border); margin: 3px 0; }
         .item-delete-btn { position: absolute; top: 10px; left: 10px; opacity: 0; transition: 0.2s; }
         .card:hover .item-delete-btn, .file-card:hover .item-delete-btn { opacity: 1; }
 
@@ -296,7 +305,7 @@
             .file-card { padding: 10px; }
 
             /* Alltid synlige knapper på mobil */
-            .item-actions { opacity: 1 !important; top: 6px; right: 6px; gap: 4px; }
+            .item-actions { opacity: 1 !important; top: 6px; right: 6px; }
             .item-delete-btn { opacity: 1 !important; top: 6px; left: 6px; }
             .icon-btn { padding: 5px 7px; font-size: 12px; }
 
@@ -438,7 +447,7 @@
         body.force-mobile .card { aspect-ratio: 4/3; }
         body.force-mobile .card-title-bar { font-size: 12px; padding: 12px 8px 8px; }
         body.force-mobile .file-card { padding: 10px; }
-        body.force-mobile .item-actions { opacity: 1 !important; top: 6px; right: 6px; gap: 4px; }
+        body.force-mobile .item-actions { opacity: 1 !important; top: 6px; right: 6px; }
         body.force-mobile .item-delete-btn { opacity: 1 !important; top: 6px; left: 6px; }
         body.force-mobile .icon-btn { padding: 5px 7px; font-size: 12px; }
         body.force-mobile .editor-header { padding: 10px 14px; flex-wrap: wrap; gap: 6px; }
@@ -2086,13 +2095,13 @@
             if(item.type==='folder'){
                 folderCount++; el.className="card";
                 if(item.thumbnail) el.style.backgroundImage = "url('"+item.thumbnail+"')";
-                var _fe=canUserEdit()?'<div class="item-actions"><button class="icon-btn" onclick="renameItem(event,\''+item.id+'\')">✏️</button><button class="icon-btn" onclick="setThumbnail(event,\''+item.id+'\')">🖼️</button><button class="icon-btn" onclick="openMoveModal(event,\''+item.id+'\')" title="Flytt mappe">📦</button><button class="icon-btn" onclick="copyItem(event,\''+item.id+'\')" title="Kopier som JSON">📋</button></div><button class="icon-btn danger item-delete-btn" onclick="deleteItem(event,\''+item.id+'\')">🗑️</button>':'';
+                var _fe=canUserEdit()?'<div class="item-actions"><button class="kebab-btn" onclick="toggleKebab(event,\'km-'+item.id+'\')">···</button><div class="kebab-menu" id="km-'+item.id+'"><button class="kebab-item" onclick="stopAndRun(event,renameItem,\''+item.id+'\')">✏️ Gi nytt navn</button><button class="kebab-item" onclick="stopAndRun(event,setThumbnail,\''+item.id+'\')">🖼️ Miniatyrbilde</button><button class="kebab-item" onclick="stopAndRun(event,openMoveModal,\''+item.id+'\')">📦 Flytt</button><button class="kebab-item" onclick="stopAndRun(event,copyItem,\''+item.id+'\')">📋 Kopier JSON</button><div class="kebab-sep"></div><button class="kebab-item danger" onclick="stopAndRun(event,deleteItem,\''+item.id+'\')">🗑️ Slett</button></div></div>':'';
                 el.innerHTML=_fe+'<div class="card-title-bar">'+sanitizeHTML(item.name)+'</div>';
                 el.onclick=function(){currentPath.push(item);render();};
                 fGrid.appendChild(el);
             } else if(item.type==='file'){
                 fileCount++; el.className="file-card";
-                var _fle=canUserEdit()?'<div class="item-actions" style="top:5px;right:5px;"><button class="icon-btn" onclick="renameItem(event,\''+item.id+'\')">✏️</button><button class="icon-btn" onclick="openMoveModal(event,\''+item.id+'\')" title="Flytt artikkel">📦</button><button class="icon-btn" onclick="copyItem(event,\''+item.id+'\')" title="Kopier innhold">📋</button></div><button class="icon-btn danger item-delete-btn" style="top:5px;left:5px;" onclick="deleteItem(event,\''+item.id+'\')">🗑️</button>':'';
+                var _fle=canUserEdit()?'<div class="item-actions"><button class="kebab-btn" onclick="toggleKebab(event,\'km-'+item.id+'\')">···</button><div class="kebab-menu" id="km-'+item.id+'"><button class="kebab-item" onclick="stopAndRun(event,renameItem,\''+item.id+'\')">✏️ Gi nytt navn</button><button class="kebab-item" onclick="stopAndRun(event,openMoveModal,\''+item.id+'\')">📦 Flytt</button><button class="kebab-item" onclick="stopAndRun(event,copyItem,\''+item.id+'\')">📋 Kopier innhold</button><div class="kebab-sep"></div><button class="kebab-item danger" onclick="stopAndRun(event,deleteItem,\''+item.id+'\')">🗑️ Slett</button></div></div>':'';
                 el.innerHTML=_fle+'<div style="font-size:14px;font-weight:600;padding-right:30px;margin-top:15px;">📄 '+sanitizeHTML(item.name)+'</div><div class="file-meta"><span>Sist endret:</span><span>'+(item.updatedAt?new Date(item.updatedAt).toLocaleDateString('no-NO'):'Ukjent')+'</span></div>';
                 el.onclick=function(){currentPath.push(item);render();};
                 fileGrid.appendChild(el);
@@ -2558,6 +2567,27 @@
 
     function deleteItem(e,id){ e.stopPropagation(); if(!confirm('Slette permanent?')) return; var parent=findParentById(db,id); parent.children.splice(parent.children.findIndex(function(c){return c.id===id;}),1); saveToDatabase(); render(); showToast('✅ Slettet','success'); }
     function deleteCurrentArticle(){ var file=currentPath[currentPath.length-1]; if(!confirm('Slette "'+sanitizeHTML(file.name)+'" permanent?')) return; var id=file.id; goBack(); var parent=findParentById(db,id); parent.children=parent.children.filter(function(c){return c.id!==id;}); saveToDatabase(); render(); showToast('✅ Slettet','success'); }
+    function toggleKebab(e, menuId){
+        e.stopPropagation();
+        var menu = document.getElementById(menuId);
+        if(!menu) return;
+        var isOpen = menu.classList.contains('open');
+        // Lukk alle åpne menyer
+        document.querySelectorAll('.kebab-menu.open').forEach(function(m){ m.classList.remove('open'); });
+        if(!isOpen) menu.classList.add('open');
+    }
+
+    function stopAndRun(e, fn, id){
+        e.stopPropagation();
+        document.querySelectorAll('.kebab-menu.open').forEach(function(m){ m.classList.remove('open'); });
+        fn(e, id);
+    }
+
+    // Lukk kebab-meny når man klikker utenfor
+    document.addEventListener('click', function(){
+        document.querySelectorAll('.kebab-menu.open').forEach(function(m){ m.classList.remove('open'); });
+    });
+
     function renameItem(e,id){ e.stopPropagation(); var item=findItemById(db,id); var ny=prompt("Nytt navn:",item.name); if(!ny||ny.trim()==="") return; item.name=validateString(ny,CONFIG.MAX_TITLE_LENGTH); saveToDatabase(); render(); showToast('✅ Omdøpt','success'); }
 
     function setThumbnail(e,id){ 
