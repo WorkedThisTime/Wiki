@@ -2580,26 +2580,48 @@
         saveToDatabase(); render(); showToast('✅ Slettet','success');
     }
     function deleteCurrentArticle(){ var file=currentPath[currentPath.length-1]; if(!confirm('Slette "'+sanitizeHTML(file.name)+'" permanent?')) return; var id=file.id; goBack(); var parent=findParentById(db,id); parent.children=parent.children.filter(function(c){return c.id!==id;}); saveToDatabase(); render(); showToast('✅ Slettet','success'); }
+    var _kebabMenu = null;
+    var _kebabId = null;
+
     function toggleKebab(e, menuId){
         e.stopPropagation();
-        var menu = document.getElementById(menuId);
-        if(!menu) return;
-        var isOpen = menu.classList.contains('open');
-        // Lukk alle åpne menyer
-        document.querySelectorAll('.kebab-menu.open').forEach(function(m){ m.classList.remove('open'); });
-        if(!isOpen) menu.classList.add('open');
+        // Lukk eksisterende
+        if(_kebabMenu){ _kebabMenu.remove(); _kebabMenu=null; if(_kebabId===menuId){_kebabId=null;return;} }
+        var tpl = document.getElementById(menuId);
+        if(!tpl) return;
+        _kebabId = menuId;
+        // Bygg flytende meny
+        var menu = tpl.cloneNode(true);
+        menu.id = 'kebab-floating';
+        menu.style.cssText = 'position:fixed;z-index:9999;background:var(--header-bg);border:1px solid var(--border);border-radius:8px;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,0.5);overflow:hidden;';
+        menu.style.display = 'block';
+        // Kopier onclick-attributter til riktige funksjoner
+        menu.querySelectorAll('[onclick]').forEach(function(btn){
+            var orig = tpl.querySelector('[onclick="'+btn.getAttribute('onclick').replace(/"/g,'"')+'"]');
+        });
+        // Posisjon
+        var btn = e.currentTarget || e.target;
+        var rect = btn.getBoundingClientRect();
+        document.body.appendChild(menu);
+        var menuW = menu.offsetWidth, menuH = menu.offsetHeight;
+        var left = rect.right - menuW;
+        var top = rect.bottom + 4;
+        if(left < 4) left = 4;
+        if(top + menuH > window.innerHeight - 4) top = rect.top - menuH - 4;
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+        _kebabMenu = menu;
     }
+
+    document.addEventListener('click', function(){
+        if(_kebabMenu){ _kebabMenu.remove(); _kebabMenu=null; _kebabId=null; }
+    });
 
     function stopAndRun(e, fn, id){
         e.stopPropagation();
-        document.querySelectorAll('.kebab-menu.open').forEach(function(m){ m.classList.remove('open'); });
+        if(_kebabMenu){ _kebabMenu.remove(); _kebabMenu=null; _kebabId=null; }
         fn(e, id);
     }
-
-    // Lukk kebab-meny når man klikker utenfor
-    document.addEventListener('click', function(){
-        document.querySelectorAll('.kebab-menu.open').forEach(function(m){ m.classList.remove('open'); });
-    });
 
     function renameItem(e,id){ e.stopPropagation(); var item=findItemById(db,id); var ny=prompt("Nytt navn:",item.name); if(!ny||ny.trim()==="") return; item.name=validateString(ny,CONFIG.MAX_TITLE_LENGTH); saveToDatabase(); render(); showToast('✅ Omdøpt','success'); }
 
