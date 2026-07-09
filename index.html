@@ -2764,6 +2764,21 @@
         var list = document.getElementById('missing-formulas-list');
         var title = document.getElementById('missing-formulas-title');
         if(!box || !list) return;
+
+        // Sett opp delegert klikk-lytter kun én gang
+        if(!list.dataset.delegated){
+            list.dataset.delegated = '1';
+            list.addEventListener('click', function(e){
+                var row = e.target.closest('.missing-formula-row');
+                if(!row) return;
+                e.stopPropagation();
+                var idx = parseInt(row.getAttribute('data-idx'), 10);
+                var data = window._missingFormulasData || [];
+                var item = data[idx];
+                if(item) openFormulaPanel(item.latex, null);
+            });
+        }
+
         if(!canUserEdit() || isEditing){ box.style.display = 'none'; return; }
 
         var spans = display.querySelectorAll('.math-clickable[data-latex]');
@@ -2802,21 +2817,25 @@
         title.style.color = 'var(--danger)';
         title.textContent = '⚠️ Formler uten forklaring (' + missing.length + ')';
 
-        missing.forEach(function(m){
+        missing.forEach(function(m, idx){
             var row = document.createElement('div');
+            row.className = 'missing-formula-row';
+            row.setAttribute('data-idx', idx);
             row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer;';
             var latexSpan = document.createElement('span');
-            latexSpan.style.cssText = 'font-size:13px;color:var(--text-main);overflow:hidden;';
+            latexSpan.style.cssText = 'font-size:13px;color:var(--text-main);overflow:hidden;pointer-events:none;';
             try{ katex.render(m.latex, latexSpan, {throwOnError:false, displayMode:false}); }
             catch(e){ latexSpan.textContent = m.latex; }
             var addBtn = document.createElement('span');
             addBtn.textContent = '+ Legg til';
-            addBtn.style.cssText = 'font-size:11px;color:var(--danger);font-weight:600;flex-shrink:0;';
+            addBtn.style.cssText = 'font-size:11px;color:var(--danger);font-weight:600;flex-shrink:0;pointer-events:none;';
             row.appendChild(latexSpan);
             row.appendChild(addBtn);
-            row.onclick = function(){ openFormulaPanel(m.latex, null); };
             list.appendChild(row);
         });
+
+        // Lagre rå latex-data globalt slik at delegert klikk kan slå den opp
+        window._missingFormulasData = missing;
     }
 
     function openFormulaPanel(latex, sourceEl){
