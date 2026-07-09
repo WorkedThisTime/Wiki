@@ -173,8 +173,8 @@
         .toast { background: var(--toast-bg); color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 13px; font-weight: 500; animation: slideInRight 0.3s cubic-bezier(0.16,1,0.3,1) forwards; opacity: 0; transform: translateX(100%); display: flex; align-items: center; gap: 10px; }
         @keyframes slideInRight { to { opacity: 1; transform: translateX(0); } }
 
-        #formula-panel { position:fixed; top:0; left:-480px; width:440px; height:100vh; background:var(--header-bg); backdrop-filter:blur(20px); border-right:1px solid var(--border); z-index:6001; transition:0.4s cubic-bezier(0.16,1,0.3,1); padding:28px 24px; overflow:hidden; box-shadow:10px 0 40px rgba(0,0,0,0.5); display:flex; flex-direction:column; gap:14px; }
-        #formula-panel.open { left:0; }
+        #formula-panel { position:fixed; top:0; right:-480px; width:440px; height:100vh; background:var(--header-bg); backdrop-filter:blur(20px); border-left:1px solid var(--border); z-index:6001; transition:0.4s cubic-bezier(0.16,1,0.3,1); padding:28px 24px; overflow:hidden; box-shadow:-10px 0 40px rgba(0,0,0,0.5); display:flex; flex-direction:column; gap:14px; }
+        #formula-panel.open { right:0; }
         .katex-clickable { cursor:pointer; border-radius:5px; transition:background 0.15s,outline 0.15s; }
         .katex-clickable:hover { background:rgba(91,143,255,0.13); outline:2px solid rgba(91,143,255,0.35); }
         .katex-clickable.fp-active { background:rgba(91,143,255,0.2); outline:2px solid rgba(91,143,255,0.7); }
@@ -538,7 +538,7 @@
 
 <div id="toast-container"></div>
 <div id="qv-overlay" onclick="event.stopPropagation(); closeQuickView();"></div>
-<div id="missing-formulas-sidebar" style="display:none;position:fixed;top:80px;right:20px;width:250px;max-height:calc(100vh - 100px);overflow-y:auto;background:var(--header-bg);border:1px solid var(--border);border-radius:10px;padding:14px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.3);">
+<div id="missing-formulas-sidebar" style="display:none;position:fixed;top:150px;right:20px;width:250px;max-height:calc(100vh - 170px);overflow-y:auto;background:var(--header-bg);border:1px solid var(--border);border-radius:10px;padding:14px;z-index:400;box-shadow:0 8px 24px rgba(0,0,0,0.3);pointer-events:auto;">
     <div id="missing-formulas-title" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">⚠️ Formler uten forklaring</div>
     <div id="missing-formulas-list" style="display:flex;flex-direction:column;gap:6px;"></div>
 </div>
@@ -2868,6 +2868,8 @@
         }
 
         document.getElementById('formula-panel').classList.add('open');
+        var sidebar = document.getElementById('missing-formulas-sidebar');
+        if(sidebar) sidebar.style.display = 'none';
     }
 
     function closeFormulaPanel(){
@@ -2876,6 +2878,8 @@
         if(prev) prev.classList.remove('fp-active');
         currentFormulaKey = null;
         currentFormulaRawLatex = null;
+        var display = document.getElementById('text-display');
+        if(display) updateMissingFormulasBox(display);
     }
 
     function handleFormulaPanelOutsideClick(e){
