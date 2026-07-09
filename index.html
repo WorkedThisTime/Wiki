@@ -908,12 +908,12 @@
                     </div>
                 </div>
                 <div class="split-pane" id="preview-pane">
-                    <div id="meta-display" style="margin-bottom:20px; font-size:11px; color:var(--text-muted); display:flex; gap:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
-                        <span id="meta-created"></span><span id="meta-updated"></span>
-                    </div>
-                    <div id="missing-formulas-box" style="display:none;margin-bottom:16px;background:rgba(218,54,51,0.08);border:1px solid rgba(218,54,51,0.35);border-radius:8px;padding:12px 14px;">
+                    <div id="missing-formulas-box" style="display:none;position:sticky;top:0;z-index:5;margin-bottom:16px;background:rgba(218,54,51,0.08);border:1px solid rgba(218,54,51,0.35);border-radius:8px;padding:12px 14px;backdrop-filter:blur(8px);">
                         <div style="font-size:11px;color:var(--danger);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">⚠️ Formler uten forklaring</div>
                         <div id="missing-formulas-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+                    </div>
+                    <div id="meta-display" style="margin-bottom:20px; font-size:11px; color:var(--text-muted); display:flex; gap:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+                        <span id="meta-created"></span><span id="meta-updated"></span>
                     </div>
                     <div id="page-switcher" style="display:none;margin-bottom:16px;display:flex;gap:8px;">
                         <button id="page-btn-1" class="btn btn-primary" style="font-size:12px;padding:5px 14px;" onclick="switchViewPage(1)">📄 Side 1</button>
