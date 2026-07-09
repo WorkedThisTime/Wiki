@@ -2759,6 +2759,16 @@
         }).catch(function(){ formulaDict={}; if(cb) cb(); });
     }
 
+    function isPlainQuantity(latex){
+        var s = latex.trim();
+        // Har likhetstegn eller strukturelle kommandoer → regnes som ekte formel
+        if(/=/.test(s)) return false;
+        if(/\\frac|\\sqrt|\\sum|\\int|\\vec|\\Delta|\\partial|\\cdot|\\times|\\pm/.test(s)) return false;
+        // Rent tall, evt. med desimalkomma/punktum, mellomrom og enhet etterpå (bokstaver, %, °, /, ^, _)
+        return /^[\d.,\s]+(\\,|\\;|\\ )?\s*[a-zA-Z°%μΩ][a-zA-Z0-9°%μΩ\/\^\{\}\\_\.\-\+ ]*$/.test(s) ||
+               /^[\d.,\s]+$/.test(s);
+    }
+
     function updateMissingFormulasBox(display){
         var box = document.getElementById('missing-formulas-sidebar');
         var list = document.getElementById('missing-formulas-list');
@@ -2781,7 +2791,13 @@
 
         if(!canUserEdit() || isEditing){ box.style.display = 'none'; return; }
 
-        var spans = display.querySelectorAll('.math-clickable[data-latex]');
+        var allSpans = display.querySelectorAll('.math-clickable[data-latex]');
+        var spans = [];
+        allSpans.forEach(function(el){
+            var raw = el.getAttribute('data-latex') || '';
+            raw = raw.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+            if(!isPlainQuantity(raw)) spans.push(el);
+        });
         var missing = [];
         var seen = {};
         spans.forEach(function(el){
