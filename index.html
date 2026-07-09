@@ -911,6 +911,10 @@
                     <div id="meta-display" style="margin-bottom:20px; font-size:11px; color:var(--text-muted); display:flex; gap:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
                         <span id="meta-created"></span><span id="meta-updated"></span>
                     </div>
+                    <div id="missing-formulas-box" style="display:none;margin-bottom:16px;background:rgba(218,54,51,0.08);border:1px solid rgba(218,54,51,0.35);border-radius:8px;padding:12px 14px;">
+                        <div style="font-size:11px;color:var(--danger);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">⚠️ Formler uten forklaring</div>
+                        <div id="missing-formulas-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+                    </div>
                     <div id="page-switcher" style="display:none;margin-bottom:16px;display:flex;gap:8px;">
                         <button id="page-btn-1" class="btn btn-primary" style="font-size:12px;padding:5px 14px;" onclick="switchViewPage(1)">📄 Side 1</button>
                         <button id="page-btn-2" class="btn btn-outline" style="font-size:12px;padding:5px 14px;" onclick="switchViewPage(2)">🔬 Side 2 – Avansert</button>
@@ -2176,6 +2180,7 @@
         resolveDbImages(display);
         setTimeout(function(){
             makeFormulasClickable(display);
+            updateMissingFormulasBox(display);
             if(window.Prism) Prism.highlightAllUnder(display);
             buildTOC();
         },50);
@@ -2753,6 +2758,49 @@
         }).catch(function(){ formulaDict={}; if(cb) cb(); });
     }
 
+    function updateMissingFormulasBox(display){
+        var box = document.getElementById('missing-formulas-box');
+        var list = document.getElementById('missing-formulas-list');
+        if(!box || !list) return;
+        if(!isEditing){ box.style.display = 'none'; return; }
+
+        var spans = display.querySelectorAll('.math-clickable[data-latex]');
+        var missing = [];
+        var seen = {};
+        spans.forEach(function(el){
+            var raw = el.getAttribute('data-latex') || '';
+            raw = raw.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+            var key = latexKey(raw);
+            if(seen[key]) return;
+            seen[key] = true;
+            if(!formulaDict[key]){
+                missing.push({ latex: raw, key: key });
+            }
+        });
+
+        if(missing.length === 0){
+            box.style.display = 'none';
+            return;
+        }
+        box.style.display = 'block';
+        list.innerHTML = '';
+        missing.forEach(function(m){
+            var row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer;';
+            var latexSpan = document.createElement('span');
+            latexSpan.style.cssText = 'font-size:13px;color:var(--text-main);overflow:hidden;';
+            try{ katex.render(m.latex, latexSpan, {throwOnError:false, displayMode:false}); }
+            catch(e){ latexSpan.textContent = m.latex; }
+            var addBtn = document.createElement('span');
+            addBtn.textContent = '+ Legg til';
+            addBtn.style.cssText = 'font-size:11px;color:var(--danger);font-weight:600;flex-shrink:0;';
+            row.appendChild(latexSpan);
+            row.appendChild(addBtn);
+            row.onclick = function(){ openFormulaPanel(m.latex, null); };
+            list.appendChild(row);
+        });
+    }
+
     function openFormulaPanel(latex, sourceEl){
         var prev = document.querySelector('.katex-clickable.fp-active');
         if(prev) prev.classList.remove('fp-active');
@@ -2855,6 +2903,8 @@
             var body = document.getElementById('fp-body');
             body.innerHTML = '<div class="fp-answer">' + rendered.html + '</div>';
             makeFormulasClickable(body);
+            var display = document.getElementById('text-display');
+            if(display) updateMissingFormulasBox(display);
         });
     }
 
