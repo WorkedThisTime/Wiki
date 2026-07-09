@@ -2762,7 +2762,7 @@
         var box = document.getElementById('missing-formulas-box');
         var list = document.getElementById('missing-formulas-list');
         if(!box || !list) return;
-        if(!isEditing){ box.style.display = 'none'; return; }
+        if(!canUserEdit() || isEditing){ box.style.display = 'none'; return; }
 
         var spans = display.querySelectorAll('.math-clickable[data-latex]');
         var missing = [];
