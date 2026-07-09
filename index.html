@@ -538,6 +538,11 @@
 
 <div id="toast-container"></div>
 <div id="qv-overlay" onclick="event.stopPropagation(); closeQuickView();"></div>
+<div id="missing-formulas-sidebar" style="display:none;position:fixed;top:80px;right:20px;width:250px;max-height:calc(100vh - 100px);overflow-y:auto;background:var(--header-bg);border:1px solid var(--border);border-radius:10px;padding:14px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.3);">
+    <div id="missing-formulas-title" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">⚠️ Formler uten forklaring</div>
+    <div id="missing-formulas-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+</div>
+
 <div id="formula-panel">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
         <span class="fp-label">🔢 Formelforklaring</span>
@@ -908,10 +913,6 @@
                     </div>
                 </div>
                 <div class="split-pane" id="preview-pane">
-                    <div id="missing-formulas-box" style="display:none;position:sticky;top:0;z-index:5;margin-bottom:16px;background:rgba(218,54,51,0.08);border:1px solid rgba(218,54,51,0.35);border-radius:8px;padding:12px 14px;backdrop-filter:blur(8px);">
-                        <div style="font-size:11px;color:var(--danger);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">⚠️ Formler uten forklaring</div>
-                        <div id="missing-formulas-list" style="display:flex;flex-direction:column;gap:6px;"></div>
-                    </div>
                     <div id="meta-display" style="margin-bottom:20px; font-size:11px; color:var(--text-muted); display:flex; gap:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
                         <span id="meta-created"></span><span id="meta-updated"></span>
                     </div>
@@ -2759,8 +2760,9 @@
     }
 
     function updateMissingFormulasBox(display){
-        var box = document.getElementById('missing-formulas-box');
+        var box = document.getElementById('missing-formulas-sidebar');
         var list = document.getElementById('missing-formulas-list');
+        var title = document.getElementById('missing-formulas-title');
         if(!box || !list) return;
         if(!canUserEdit() || isEditing){ box.style.display = 'none'; return; }
 
@@ -2778,7 +2780,6 @@
             }
         });
 
-        box.style.display = 'block';
         list.innerHTML = '';
 
         if(spans.length === 0){
@@ -2786,18 +2787,20 @@
             return;
         }
 
+        box.style.display = 'block';
+
         if(missing.length === 0){
             box.style.background = 'rgba(63,185,80,0.08)';
             box.style.borderColor = 'rgba(63,185,80,0.35)';
-            box.querySelector('div').style.color = '#3fb950';
-            box.querySelector('div').textContent = '✅ Alle formler har forklaring';
+            title.style.color = '#3fb950';
+            title.textContent = '✅ Alle formler har forklaring';
             return;
         }
 
-        box.style.background = 'rgba(218,54,51,0.08)';
-        box.style.borderColor = 'rgba(218,54,51,0.35)';
-        box.querySelector('div').style.color = 'var(--danger)';
-        box.querySelector('div').textContent = '⚠️ Formler uten forklaring (' + missing.length + ')';
+        box.style.background = 'var(--header-bg)';
+        box.style.borderColor = 'var(--border)';
+        title.style.color = 'var(--danger)';
+        title.textContent = '⚠️ Formler uten forklaring (' + missing.length + ')';
 
         missing.forEach(function(m){
             var row = document.createElement('div');
