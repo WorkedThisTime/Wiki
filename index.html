@@ -2778,12 +2778,27 @@
             }
         });
 
-        if(missing.length === 0){
+        box.style.display = 'block';
+        list.innerHTML = '';
+
+        if(spans.length === 0){
             box.style.display = 'none';
             return;
         }
-        box.style.display = 'block';
-        list.innerHTML = '';
+
+        if(missing.length === 0){
+            box.style.background = 'rgba(63,185,80,0.08)';
+            box.style.borderColor = 'rgba(63,185,80,0.35)';
+            box.querySelector('div').style.color = '#3fb950';
+            box.querySelector('div').textContent = '✅ Alle formler har forklaring';
+            return;
+        }
+
+        box.style.background = 'rgba(218,54,51,0.08)';
+        box.style.borderColor = 'rgba(218,54,51,0.35)';
+        box.querySelector('div').style.color = 'var(--danger)';
+        box.querySelector('div').textContent = '⚠️ Formler uten forklaring (' + missing.length + ')';
+
         missing.forEach(function(m){
             var row = document.createElement('div');
             row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer;';
