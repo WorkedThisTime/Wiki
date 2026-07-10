@@ -3122,8 +3122,8 @@
     }
 
     function encodeFormulaKey(key){
-        // Firebase tillater ikke . # $ [ ] i nøkler
-        return key.replace(/[.#$\[\]]/g, function(c){ return '_x'+c.charCodeAt(0)+'_'; });
+        // Firebase tillater ikke . # $ [ ] / i nøkler
+        return key.replace(/[.#$\[\]\/]/g, function(c){ return '_x'+c.charCodeAt(0)+'_'; });
     }
 
     function makeFormulasClickable(container, attempt){
