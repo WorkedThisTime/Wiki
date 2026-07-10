@@ -691,6 +691,8 @@
                 </tfoot>
             </table>
             <div id="storage-top-list" style="margin-top:8px;"></div>
+            <button id="recompress-btn" class="btn btn-outline" style="width:100%;justify-content:center;margin-top:14px;" onclick="recompressAllImages()">♻️ Komprimer alle bilder på nytt</button>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;text-align:center;">Krymper gamle bilder i teksten til de nye, mindre innstillingene (800×600, 72%)</div>
         </div>
         <button class="btn btn-outline" style="width:100%; justify-content:center; margin-top:16px;" onclick="closeStorageModal()">Lukk</button>
     </div>
@@ -3350,6 +3352,63 @@
         }).catch(function(err){
             document.getElementById('storage-loading').textContent = '❌ Kunne ikke hente data: ' + err.message;
         });
+    }
+
+    function recompressDataUrl(dataUrl, maxW, maxH, quality){
+        return new Promise(function(resolve, reject){
+            var img = new Image();
+            img.onload = function(){
+                var w = img.width, h = img.height;
+                var scale = Math.min(maxW / w, maxH / h, 1);
+                var tw = Math.round(w * scale), th = Math.round(h * scale);
+                var canvas = document.createElement('canvas');
+                canvas.width = tw; canvas.height = th;
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, tw, th);
+                var newDataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(newDataUrl);
+            };
+            img.onerror = function(){ reject(new Error('Kunne ikke laste bilde')); };
+            img.src = dataUrl;
+        });
+    }
+
+    async function recompressAllImages(){
+        if(!confirm('Dette vil komprimere alle eksisterende bilder i teksten på nytt med de nye, mindre innstillingene (800×600, 72%). Dette kan ikke angres. Fortsette?')) return;
+        var btn = document.getElementById('recompress-btn');
+        if(btn){ btn.disabled = true; btn.textContent = '⏳ Starter...'; }
+
+        try {
+            var snap = await firebase.database().ref('wiki-images').once('value');
+            var images = snap.val() || {};
+            var keys = Object.keys(images);
+            var total = keys.length;
+            var done = 0, savedBytes = 0, failed = 0;
+
+            for(var i=0; i<keys.length; i++){
+                var key = keys[i];
+                var oldDataUrl = images[key];
+                var oldSize = byteLen(oldDataUrl);
+                try {
+                    var newDataUrl = await recompressDataUrl(oldDataUrl, 800, 600, 0.72);
+                    var newSize = byteLen(newDataUrl);
+                    // Bare lagre på nytt hvis det faktisk ble mindre
+                    if(newSize < oldSize){
+                        await firebase.database().ref('wiki-images/' + key).set(newDataUrl);
+                        savedBytes += (oldSize - newSize);
+                    }
+                } catch(e){ failed++; }
+                done++;
+                if(btn) btn.textContent = '⏳ ' + done + ' / ' + total + '...';
+            }
+
+            if(btn){ btn.disabled = false; btn.textContent = '♻️ Komprimer alle bilder på nytt'; }
+            showToast('✅ Ferdig! Sparte ' + formatBytes(savedBytes) + (failed ? (' (' + failed + ' feilet)') : ''), 'success');
+            openStorageStats(); // oppdater tallene
+        } catch(e){
+            if(btn){ btn.disabled = false; btn.textContent = '♻️ Komprimer alle bilder på nytt'; }
+            showToast('❌ Noe gikk galt: ' + e.message, 'error');
+        }
     }
 
     function closeStorageModal(){ document.getElementById('storage-modal').style.display = 'none'; }
