@@ -2818,9 +2818,17 @@
 
     function latexKey(latex){ return latex.trim().replace(/\s+/g,' '); }
 
+    function decodeFormulaKey(encoded){
+        return encoded.replace(/_x(\d+)_/g, function(_, code){ return String.fromCharCode(parseInt(code,10)); });
+    }
+
     function loadFormulaDict(cb){
         firebase.database().ref('formulaDict').once('value').then(function(snap){
-            formulaDict = snap.val() || {};
+            var raw = snap.val() || {};
+            formulaDict = {};
+            Object.keys(raw).forEach(function(encodedKey){
+                formulaDict[decodeFormulaKey(encodedKey)] = raw[encodedKey];
+            });
             if(cb) cb();
         }).catch(function(){ formulaDict={}; if(cb) cb(); });
     }
