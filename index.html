@@ -693,6 +693,8 @@
             <div id="storage-top-list" style="margin-top:8px;"></div>
             <button id="recompress-btn" class="btn btn-outline" style="width:100%;justify-content:center;margin-top:14px;" onclick="recompressAllImages()">♻️ Komprimer alle bilder på nytt</button>
             <div style="font-size:11px;color:var(--text-muted);margin-top:6px;text-align:center;">Krymper gamle bilder i teksten til de nye, mindre innstillingene (800×600, 72%)</div>
+            <button id="merge-formulas-btn" class="btn btn-outline" style="width:100%;justify-content:center;margin-top:10px;" onclick="mergeDuplicateFormulas()">🔀 Slå sammen like formler</button>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;text-align:center;">Fjerner duplikater som «9,81 m/s²» skrevet på ulike måter</div>
         </div>
         <button class="btn btn-outline" style="width:100%; justify-content:center; margin-top:16px;" onclick="closeStorageModal()">Lukk</button>
     </div>
@@ -2881,7 +2883,18 @@
     var currentFormulaRawLatex = null;
     var currentFormulaIsDisplay = false;
 
-    function latexKey(latex){ return latex.trim().replace(/\s+/g,' '); }
+    function latexKey(latex){
+        var s = latex.trim().replace(/\s+/g,' ');
+        // Normaliser ulike måter å skrive enheter/mellomrom på, slik at like formler
+        // (f.eks. "9,81 \, m/s^2" og "9,81 \text{ m/s}^2") får samme nøkkel
+        s = s
+            .replace(/\\(text|mathrm|mathbf|mathit|rm)\s*\{([^}]*)\}/g, '$2') // pakk ut \text{...} osv.
+            .replace(/\\[,;:!]|\\ /g, ' ')   // \, \; \: \! \(mellomrom) → vanlig mellomrom
+            .replace(/\\quad|\\qquad/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        return s;
+    }
 
     function decodeFormulaKey(encoded){
         return encoded.replace(/_x(\d+)_/g, function(_, code){ return String.fromCharCode(parseInt(code,10)); });
@@ -3516,6 +3529,75 @@
     }
 
     function closeStorageModal(){ document.getElementById('storage-modal').style.display = 'none'; }
+
+    async function mergeDuplicateFormulas(){
+        if(!confirm('Dette vil gruppere formler som egentlig er like (men skrevet litt ulikt), slå dem sammen til én, og beholde den lengste forklaringen. Fortsette?')) return;
+        var btn = document.getElementById('merge-formulas-btn');
+        if(btn){ btn.disabled = true; btn.textContent = '⏳ Sjekker...'; }
+
+        try {
+            var snap = await firebase.database().ref('formulaDict').once('value');
+            var raw = snap.val() || {};
+            var flat = {};
+            (function flatten(obj, prefix){
+                Object.keys(obj).forEach(function(k){
+                    var val = obj[k];
+                    var fullKey = prefix ? (prefix + '/' + k) : k;
+                    if(val && typeof val === 'object') flatten(val, fullKey);
+                    else if(typeof val === 'string') flat[decodeFormulaKey(fullKey)] = val;
+                });
+            })(raw, '');
+
+            // Grupper etter normalisert nøkkel
+            var groups = {};
+            Object.keys(flat).forEach(function(rawKey){
+                var norm = latexKey(rawKey);
+                if(!groups[norm]) groups[norm] = [];
+                groups[norm].push({ originalKey: rawKey, explanation: flat[rawKey] });
+            });
+
+            var mergedCount = 0;
+            var updates = {};
+            var deletions = [];
+
+            Object.keys(groups).forEach(function(norm){
+                var entries = groups[norm];
+                if(entries.length <= 1) return;
+                // Behold den lengste forklaringen
+                entries.sort(function(a,b){ return (b.explanation||'').length - (a.explanation||'').length; });
+                var winner = entries[0];
+                mergedCount += entries.length - 1;
+                entries.forEach(function(e){
+                    if(e.originalKey !== norm) deletions.push(e.originalKey);
+                });
+                if(winner.originalKey !== norm) deletions.push(winner.originalKey);
+                updates[norm] = winner.explanation;
+            });
+
+            if(mergedCount === 0){
+                if(btn){ btn.disabled = false; btn.textContent = '🔀 Slå sammen like formler'; }
+                showToast('✅ Ingen duplikater funnet', 'success');
+                return;
+            }
+
+            // Skriv nye, normaliserte nøkler
+            for(var normKey in updates){
+                await firebase.database().ref('formulaDict/' + encodeFormulaKey(normKey)).set(updates[normKey]);
+            }
+            // Slett gamle nøkler (unntatt hvis de tilfeldigvis er identiske med den nye normaliserte nøkkelen)
+            var uniqueDeletions = Array.from(new Set(deletions)).filter(function(k){ return !(k in updates); });
+            for(var i=0;i<uniqueDeletions.length;i++){
+                await firebase.database().ref('formulaDict/' + encodeFormulaKey(uniqueDeletions[i])).remove();
+            }
+
+            if(btn){ btn.disabled = false; btn.textContent = '🔀 Slå sammen like formler'; }
+            showToast('✅ Slo sammen ' + mergedCount + ' duplikat(er)', 'success');
+            loadFormulaDict();
+        } catch(e){
+            if(btn){ btn.disabled = false; btn.textContent = '🔀 Slå sammen like formler'; }
+            showToast('❌ Noe gikk galt: ' + e.message, 'error');
+        }
+    }
 
     // ── CONNECTION MAP (ARC DIAGRAM) ─────────────────────────────────
     function openConnectionMap(){
