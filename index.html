@@ -2801,7 +2801,8 @@
     function handleSearch(){
         var query=document.getElementById('search-input').value.toLowerCase();
         var resBox=document.getElementById('search-results'); resBox.innerHTML="";
-        if(query.length<2){resBox.style.display="none";return;}
+        var minLen = (searchMode === 'formulas') ? 1 : 2;
+        if(query.length<minLen){resBox.style.display="none";return;}
 
         if(searchMode === 'formulas'){
             var results = [];
