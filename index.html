@@ -3248,30 +3248,41 @@
         var articleBytes = 0, articleCount = 0;
         var quizBytes = 0, quizCount = 0;
         var animBytes = 0, animCount = 0;
+        var thumbBytes = 0, thumbCount = 0;
 
         function walk(node){
             if(!node) return;
             if(node.type === 'file'){
                 articleCount++;
                 articleBytes += byteLen(node.content) + byteLen(node.content2) + byteLen(node.name) + byteLen(node.aliases);
-                if(Array.isArray(node.quizzes)){
-                    node.quizzes.forEach(function(q){
-                        quizCount++;
-                        quizBytes += byteLen(JSON.stringify(q));
+                if(Array.isArray(node.animationCodes)){
+                    node.animationCodes.forEach(function(code){
+                        if(code && code.trim()){
+                            animCount++;
+                            animBytes += byteLen(code);
+                        }
                     });
+                } else if(node.animationCode && node.animationCode.trim()){
+                    animCount++;
+                    animBytes += byteLen(node.animationCode);
                 }
-                if(node.animationCodes){
-                    Object.keys(node.animationCodes).forEach(function(k){
-                        animCount++;
-                        animBytes += byteLen(node.animationCodes[k]);
-                    });
-                }
+            }
+            if(node.type === 'folder' && Array.isArray(node.quizes)){
+                node.quizes.forEach(function(q){
+                    quizCount++;
+                    quizBytes += byteLen(JSON.stringify(q));
+                });
+            }
+            // Mappe/dokument-miniatyrbilder lagres direkte på noden (base64), ikke i wiki-images
+            if(typeof node.thumbnail === 'string' && !/^db:/.test(node.thumbnail)){
+                thumbCount++;
+                thumbBytes += byteLen(node.thumbnail);
             }
             if(Array.isArray(node.children)) node.children.forEach(walk);
         }
         walk(db);
 
-        // Bilder og formler ligger i egne Firebase-noder
+        // Bilder (satt inn i tekst) og formler ligger i egne Firebase-noder
         Promise.all([
             firebase.database().ref('wiki-images').once('value'),
             firebase.database().ref('formulaDict').once('value')
@@ -3295,7 +3306,8 @@
 
             var rows = [
                 { name:'📄 Artikkeltekst', count: articleCount, bytes: articleBytes },
-                { name:'🖼️ Bilder', count: imgCount, bytes: imgBytes },
+                { name:'🖼️ Bilder i tekst', count: imgCount, bytes: imgBytes },
+                { name:'🏷️ Mappe/dok-miniatyrer', count: thumbCount, bytes: thumbBytes },
                 { name:'🎯 Quizer', count: quizCount, bytes: quizBytes },
                 { name:'🎬 Animasjoner', count: animCount, bytes: animBytes },
                 { name:'🔢 Formelforklaringer', count: formulaCount, bytes: formulaBytes }
