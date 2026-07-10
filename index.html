@@ -605,6 +605,10 @@
                 <span style="font-size:16px;">🔁</span>
                 <div style="text-align:left;"><div style="font-weight:700;">Skann for duplikater</div><div style="font-size:11px;opacity:0.75;font-weight:400;">Finn dokumenter med samme tittel</div></div>
             </button>
+            <button class="btn btn-outline" onclick="openStorageStats()" style="justify-content:flex-start;gap:12px;">
+                <span style="font-size:16px;">💽</span>
+                <div style="text-align:left;"><div style="font-weight:700;">Lagringsplass</div><div style="font-size:11px;opacity:0.75;font-weight:400;">Se hva som tar mest plass</div></div>
+            </button>
         </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;">
@@ -656,6 +660,39 @@
         <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Dokumenter med <strong>identisk tittel</strong> er gruppert nedenfor. Klikk på et dokument for å åpne det, eller slett kopier du ikke trenger.</p>
         <div id="dup-results" style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;"></div>
         <button class="btn btn-outline" style="width:100%; justify-content:center; margin-top:16px;" onclick="closeDupModal()">Lukk</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="storage-modal" onclick="closeStorageModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:640px; max-height:80vh; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h2 style="margin:0;">💽 Lagringsplass</h2>
+            <button class="icon-btn" onclick="closeStorageModal()">✕</button>
+        </div>
+        <div id="storage-loading" style="font-size:13px; color:var(--text-muted); text-align:center; padding:24px 0;">Beregner størrelser...</div>
+        <div id="storage-results" style="overflow-y:auto; flex:1; display:none; flex-direction:column; gap:14px;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <th style="text-align:left; padding:8px 6px; color:var(--text-muted); font-weight:600;">Kategori</th>
+                        <th style="text-align:right; padding:8px 6px; color:var(--text-muted); font-weight:600;">Antall</th>
+                        <th style="text-align:right; padding:8px 6px; color:var(--text-muted); font-weight:600;">Størrelse</th>
+                        <th style="text-align:right; padding:8px 6px; color:var(--text-muted); font-weight:600;">Andel</th>
+                    </tr>
+                </thead>
+                <tbody id="storage-table-body"></tbody>
+                <tfoot>
+                    <tr style="border-top:2px solid var(--border); font-weight:700;">
+                        <td style="padding:10px 6px;">Totalt</td>
+                        <td id="storage-total-count" style="text-align:right; padding:10px 6px;"></td>
+                        <td id="storage-total-size" style="text-align:right; padding:10px 6px;"></td>
+                        <td style="text-align:right; padding:10px 6px;">100%</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div id="storage-top-list" style="margin-top:8px;"></div>
+        </div>
+        <button class="btn btn-outline" style="width:100%; justify-content:center; margin-top:16px;" onclick="closeStorageModal()">Lukk</button>
     </div>
 </div>
 
@@ -3190,6 +3227,120 @@
     }
 
     function closeDupModal(){ document.getElementById('dup-modal').style.display = 'none'; }
+
+    function byteLen(str){
+        if(!str) return 0;
+        try { return new Blob([str]).size; } catch(e){ return (str||'').length; }
+    }
+
+    function formatBytes(bytes){
+        if(bytes < 1024) return bytes + ' B';
+        if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+        return (bytes/(1024*1024)).toFixed(2) + ' MB';
+    }
+
+    function openStorageStats(){
+        document.getElementById('storage-modal').style.display = 'flex';
+        document.getElementById('storage-loading').style.display = 'block';
+        document.getElementById('storage-results').style.display = 'none';
+
+        // Artikkeltekst (side 1 + side 2 + aliaser + titler)
+        var articleBytes = 0, articleCount = 0;
+        var quizBytes = 0, quizCount = 0;
+        var animBytes = 0, animCount = 0;
+
+        function walk(node){
+            if(!node) return;
+            if(node.type === 'file'){
+                articleCount++;
+                articleBytes += byteLen(node.content) + byteLen(node.content2) + byteLen(node.name) + byteLen(node.aliases);
+                if(Array.isArray(node.quizzes)){
+                    node.quizzes.forEach(function(q){
+                        quizCount++;
+                        quizBytes += byteLen(JSON.stringify(q));
+                    });
+                }
+                if(node.animationCodes){
+                    Object.keys(node.animationCodes).forEach(function(k){
+                        animCount++;
+                        animBytes += byteLen(node.animationCodes[k]);
+                    });
+                }
+            }
+            if(Array.isArray(node.children)) node.children.forEach(walk);
+        }
+        walk(db);
+
+        // Bilder og formler ligger i egne Firebase-noder
+        Promise.all([
+            firebase.database().ref('wiki-images').once('value'),
+            firebase.database().ref('formulaDict').once('value')
+        ]).then(function(results){
+            var imgSnap = results[0].val() || {};
+            var formulaSnap = results[1].val() || {};
+
+            var imgBytes = 0, imgCount = 0;
+            var imgList = [];
+            Object.keys(imgSnap).forEach(function(k){
+                var b = byteLen(imgSnap[k]);
+                imgBytes += b; imgCount++;
+                imgList.push({ id:k, bytes:b });
+            });
+
+            var formulaBytes = 0, formulaCount = 0;
+            Object.keys(formulaSnap).forEach(function(k){
+                formulaBytes += byteLen(formulaSnap[k]);
+                formulaCount++;
+            });
+
+            var rows = [
+                { name:'📄 Artikkeltekst', count: articleCount, bytes: articleBytes },
+                { name:'🖼️ Bilder', count: imgCount, bytes: imgBytes },
+                { name:'🎯 Quizer', count: quizCount, bytes: quizBytes },
+                { name:'🎬 Animasjoner', count: animCount, bytes: animBytes },
+                { name:'🔢 Formelforklaringer', count: formulaCount, bytes: formulaBytes }
+            ];
+
+            var total = rows.reduce(function(sum,r){ return sum + r.bytes; }, 0) || 1;
+            var totalCount = rows.reduce(function(sum,r){ return sum + r.count; }, 0);
+
+            var tbody = document.getElementById('storage-table-body');
+            tbody.innerHTML = '';
+            rows.sort(function(a,b){ return b.bytes - a.bytes; }).forEach(function(r){
+                var pct = ((r.bytes/total)*100).toFixed(1);
+                var tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid var(--border)';
+                tr.innerHTML = '<td style="padding:8px 6px;">'+r.name+'</td>'
+                    + '<td style="text-align:right;padding:8px 6px;">'+r.count+'</td>'
+                    + '<td style="text-align:right;padding:8px 6px;font-family:monospace;">'+formatBytes(r.bytes)+'</td>'
+                    + '<td style="text-align:right;padding:8px 6px;color:var(--text-muted);">'+pct+'%</td>';
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('storage-total-count').textContent = totalCount;
+            document.getElementById('storage-total-size').textContent = formatBytes(total);
+
+            // Topp 5 største enkeltbilder
+            imgList.sort(function(a,b){ return b.bytes - a.bytes; });
+            var topList = document.getElementById('storage-top-list');
+            if(imgList.length > 0){
+                var topHtml = '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Største enkeltbilder</div>';
+                imgList.slice(0,5).forEach(function(im){
+                    topHtml += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-muted);font-family:monospace;">'+im.id.substring(0,24)+'…</span><span>'+formatBytes(im.bytes)+'</span></div>';
+                });
+                topList.innerHTML = topHtml;
+            } else {
+                topList.innerHTML = '';
+            }
+
+            document.getElementById('storage-loading').style.display = 'none';
+            document.getElementById('storage-results').style.display = 'flex';
+        }).catch(function(err){
+            document.getElementById('storage-loading').textContent = '❌ Kunne ikke hente data: ' + err.message;
+        });
+    }
+
+    function closeStorageModal(){ document.getElementById('storage-modal').style.display = 'none'; }
 
     // ── CONNECTION MAP (ARC DIAGRAM) ─────────────────────────────────
     function openConnectionMap(){
