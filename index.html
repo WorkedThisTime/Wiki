@@ -2809,9 +2809,12 @@
             if(!cleanQuery) cleanQuery = query;
             var results = [];
             Object.keys(formulaDict).forEach(function(key){
-                var explanation = formulaDict[key] || '';
-                var haystack = stripLatexToWords(key) + ' ' + explanation.toLowerCase();
-                if(haystack.includes(cleanQuery)) results.push({ key:key, explanation:explanation });
+                try {
+                    var explanation = formulaDict[key];
+                    if(typeof explanation !== 'string') explanation = '';
+                    var haystack = stripLatexToWords(key) + ' ' + explanation.toLowerCase();
+                    if(haystack.includes(cleanQuery)) results.push({ key:key, explanation:explanation });
+                } catch(e) { /* hopp over korrupte oppføringer */ }
             });
             if(results.length === 0){
                 resBox.innerHTML = '<div style="padding:12px 16px;color:var(--text-muted);font-size:13px;">Ingen formler funnet.</div>';
@@ -2888,9 +2891,21 @@
         firebase.database().ref('formulaDict').once('value').then(function(snap){
             var raw = snap.val() || {};
             formulaDict = {};
-            Object.keys(raw).forEach(function(encodedKey){
-                formulaDict[decodeFormulaKey(encodedKey)] = raw[encodedKey];
-            });
+
+            function flatten(obj, prefix){
+                Object.keys(obj).forEach(function(k){
+                    var val = obj[k];
+                    var fullKey = prefix ? (prefix + '/' + k) : k;
+                    if(val && typeof val === 'object'){
+                        // Gamle, feilaktig nøstede oppføringer (fra før skråstrek ble kryptert riktig)
+                        flatten(val, fullKey);
+                    } else if(typeof val === 'string'){
+                        formulaDict[decodeFormulaKey(fullKey)] = val;
+                    }
+                });
+            }
+            flatten(raw, '');
+
             if(cb) cb();
         }).catch(function(){ formulaDict={}; if(cb) cb(); });
     }
