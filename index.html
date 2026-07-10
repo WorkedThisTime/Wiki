@@ -226,8 +226,6 @@
         .anim-slot-textarea { width: 100%; height: 120px; font-family: 'Fira Code', monospace; resize: vertical; background: transparent; color: var(--text-main); border: 1px solid var(--border); padding: 10px; font-size: 12px; border-radius: 6px; line-height: 1.5; }
         .anim-slot-textarea:focus { border-color: var(--blue); outline: none; }
         .p5-container { display: flex; justify-content: center; overflow: hidden; border-radius: 8px; background: var(--bg); margin: 4px 0; padding: 10px; border: 1px solid var(--border); }
-        .p5-stage { position: relative; transform-origin: top center; }
-        .p5-stage canvas.p5Canvas { max-width: none !important; width: 100% !important; height: 100% !important; display: block; margin: 0 !important; border-radius: var(--radius); }
         .animation-wrapper { border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; background: var(--card-bg); margin: 20px 0; }
         .animation-header { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; margin-bottom: 10px; }
         .animation-error { color: var(--danger); padding: 20px; border-radius: 6px; background: rgba(218,54,51,0.1); border: 1px solid var(--danger); font-family: 'Fira Code', monospace; white-space: pre-wrap; font-size: 12px; }
@@ -1527,12 +1525,12 @@
 
                 // Bygg en fullstendig HTML-side for iframen
                 var srcdoc = '<!DOCTYPE html><html><head><meta charset="utf-8">'
-                    + '<style>*{box-sizing:border-box;margin:0;padding:0;}body{background:transparent;overflow:hidden;}</style>'
+                    + '<style>*{box-sizing:border-box;}body{margin:0;padding:0;background:transparent;}</style>'
                     + '</head><body>' + code + '</body></html>';
 
                 // Placeholder med play-knapp — ikke last animasjon før synlig
                 wrapper.innerHTML = '';
-                wrapper.style.cssText = 'position:relative;border-radius:10px;overflow:hidden;min-height:120px;background:rgba(163,113,247,0.04);border:1px solid rgba(163,113,247,0.3);';
+                wrapper.style.cssText = 'position:relative;border-radius:10px;overflow:visible;min-height:120px;background:rgba(163,113,247,0.04);border:1px solid rgba(163,113,247,0.3);';
 
                 var placeholder = document.createElement('div');
                 placeholder.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;gap:12px;min-height:120px;cursor:pointer;';
@@ -1542,28 +1540,55 @@
 
                 var iframe = null;
                 var observer = null;
+                var sizeRO = null;
+                var sizePollInterval = null;
+
+                function syncIframeHeight(){
+                    if(!iframe) return;
+                    try {
+                        var doc = iframe.contentDocument;
+                        if(!doc || !doc.body) return;
+                        var h = Math.max(
+                            doc.body.scrollHeight,
+                            doc.documentElement ? doc.documentElement.scrollHeight : 0
+                        );
+                        if(h > 0) iframe.style.height = h + 'px';
+                    } catch(e) {}
+                }
 
                 function loadIframe() {
                     if(iframe) return;
                     placeholder.style.display = 'none';
                     iframe = document.createElement('iframe');
-                    iframe.style.cssText = 'width:100%;border:none;display:block;border-radius:10px;';
+                    iframe.style.cssText = 'width:100%;border:none;display:block;border-radius:10px;overflow:visible;';
                     iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
                     iframe.srcdoc = srcdoc;
                     wrapper.appendChild(iframe);
 
-                    // Auto-høyde etter innlasting
                     iframe.onload = function(){
+                        syncIframeHeight();
                         try {
-                            var h = iframe.contentDocument && iframe.contentDocument.body
-                                ? iframe.contentDocument.body.scrollHeight : 0;
-                            iframe.style.height = (Math.max(h, 200)) + 'px';
-                        } catch(e) { iframe.style.height = '340px'; }
+                            var doc = iframe.contentDocument;
+                            if(doc && doc.body && 'ResizeObserver' in window){
+                                sizeRO = new ResizeObserver(function(){ syncIframeHeight(); });
+                                sizeRO.observe(doc.body);
+                                if(doc.documentElement) sizeRO.observe(doc.documentElement);
+                            }
+                        } catch(e) {}
+                        // Ekstra polling første sekundene — fanger opp innhold som endrer størrelse etter egne beregninger (f.eks. canvas basert på bredde)
+                        var pollCount = 0;
+                        sizePollInterval = setInterval(function(){
+                            syncIframeHeight();
+                            pollCount++;
+                            if(pollCount > 20) clearInterval(sizePollInterval);
+                        }, 150);
                     };
                 }
 
                 function unloadIframe() {
                     if(!iframe) return;
+                    if(sizeRO){ try{ sizeRO.disconnect(); }catch(e){} sizeRO = null; }
+                    if(sizePollInterval){ clearInterval(sizePollInterval); sizePollInterval = null; }
                     iframe.remove();
                     iframe = null;
                     placeholder.style.display = 'flex';
@@ -2208,35 +2233,11 @@
     function loadP5AnimationInto(containerId,code){
         if(!window.p5||!code) return;
         if(p5Instances[containerId]){try{p5Instances[containerId].remove();}catch(e){}}
-        var outerContainer=document.getElementById(containerId); if(!outerContainer) return;
-        outerContainer.innerHTML="";
-
-        // Lag en indre "stage" som får eksakt pikselstørrelsen animasjonen ber om
-        // via createCanvas(w,h). Stagen skaleres ned proporsjonalt med CSS transform
-        // hvis den er bredere enn tilgjengelig plass — ingenting klippes bort.
-        var stage=document.createElement('div');
-        var stageId=containerId+'-stage';
-        stage.id=stageId; stage.className='p5-stage';
-        outerContainer.appendChild(stage);
-
-        function fitStage(w,h){
-            if(!w||!h) return;
-            stage.style.width=w+'px';
-            stage.style.height=h+'px';
-            var avail=outerContainer.clientWidth||w;
-            var scale=Math.min(1,avail/w);
-            stage.style.transform='scale('+scale+')';
-            outerContainer.style.height=Math.round(h*scale)+'px';
-        }
-
+        var container=document.getElementById(containerId); if(!container) return;
+        container.innerHTML="";
         try{
             p5Instances[containerId]=new p5(function(p){
-                p.createCanvas=function(w,h,r){
-                    var c=p.constructor.prototype.createCanvas.call(p,w,h,r);
-                    c.parent(stageId);
-                    fitStage(w,h);
-                    return c;
-                };
+                p.createCanvas=function(w,h,r){var c=p.constructor.prototype.createCanvas.call(p,w,h,r);c.parent(containerId);return c;};
                 var rawCode=code.replace(/function\s+setup\s*\(/g,'p.setup = function(').replace(/function\s+draw\s*\(/g,'p.draw = function(');
                 // Begrens frameRate automatisk for å spare CPU
                 if(!/frameRate\s*\(/.test(rawCode)){
@@ -2244,18 +2245,8 @@
                 }
                 var safeCode='try{'+rawCode+'if(typeof p.draw===\'function\'){const _o=p.draw;p.draw=function(){try{_o();}catch(err){p.noLoop();const el=document.getElementById(\''+containerId+'\');if(el)el.innerHTML=\'<div class="animation-error">❌ \'+err.message+\'</div>\';}}}}catch(err){throw err;}';
                 new Function('p',safeCode)(p);
-            },stage);
-        }catch(e){outerContainer.innerHTML='<div class="animation-error">❌ Syntaksfeil:<br>'+sanitizeHTML(e.message)+'</div>';}
-
-        // Hold skaleringen riktig når vindu/artikkel endrer bredde
-        if('ResizeObserver' in window){
-            var ro=new ResizeObserver(function(){
-                var cv=stage.querySelector('canvas');
-                if(cv) fitStage(parseInt(stage.style.width)||cv.width, parseInt(stage.style.height)||cv.height);
-            });
-            ro.observe(outerContainer);
-        }
-
+            },container);
+        }catch(e){container.innerHTML='<div class="animation-error">❌ Syntaksfeil:<br>'+sanitizeHTML(e.message)+'</div>';}
         // Pause animasjonen når den ikke er synlig (spar CPU)
         if(p5Instances[containerId] && 'IntersectionObserver' in window){
             var obs = new IntersectionObserver(function(entries){
@@ -2265,7 +2256,8 @@
                     try{ if(entry.isIntersecting){ inst.loop(); } else { inst.noLoop(); } }catch(e){}
                 });
             }, {threshold: 0.1});
-            obs.observe(outerContainer);
+            var el = document.getElementById(containerId);
+            if(el) obs.observe(el);
         }
     }
 
