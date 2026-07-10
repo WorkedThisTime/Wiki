@@ -1801,7 +1801,7 @@
         if(file.size > 20*1024*1024){ showToast('❌ Bildet er for stort (maks 20MB)','error'); return null; }
         setUploadProgress(true, 'Komprimerer ' + file.name + '...');
         try {
-            var result = await compressImage(file, 1200, 1200, 0.80);
+            var result = await compressImage(file, 800, 600, 0.72);
             var savings = result.savedPct > 0 ? ' (' + result.savedPct + '% mindre)' : '';
             setUploadProgress(true, 'Lagrer' + savings + '...');
             var imgId = 'img-' + Date.now() + '-' + Math.random().toString(36).substr(2,6);
