@@ -3268,6 +3268,15 @@
                     animCount++;
                     animBytes += byteLen(node.animationCode);
                 }
+                // Tell også :::widget-blokker som ligger direkte i artikkelteksten
+                [node.content, node.content2].forEach(function(txt){
+                    if(!txt) return;
+                    var widgetMatches = txt.match(/:::widget\s*\n[\s\S]*?:::/g) || [];
+                    widgetMatches.forEach(function(w){
+                        animCount++;
+                        animBytes += byteLen(w);
+                    });
+                });
             }
             if(node.type === 'folder' && Array.isArray(node.quizes)){
                 node.quizes.forEach(function(q){
