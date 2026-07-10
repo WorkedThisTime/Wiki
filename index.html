@@ -2829,10 +2829,20 @@
         var s = latex.trim();
         // Har likhetstegn eller strukturelle kommandoer → regnes som ekte formel
         if(/=/.test(s)) return false;
-        if(/\\frac|\\sqrt|\\sum|\\int|\\vec|\\Delta|\\partial|\\cdot|\\times|\\pm/.test(s)) return false;
-        // Rent tall, evt. med desimalkomma/punktum, mellomrom og enhet etterpå (bokstaver, %, °, /, ^, _)
-        return /^[\d.,\s]+(\\,|\\;|\\ )?\s*[a-zA-Z°%μΩ][a-zA-Z0-9°%μΩ\/\^\{\}\\_\.\-\+ ]*$/.test(s) ||
-               /^[\d.,\s]+$/.test(s);
+        if(/\\frac|\\sqrt|\\sum|\\int|\\vec|\\Delta|\\partial|\\nabla|\\cdot|\\times|\\pm|\\to\b|\\rightarrow/.test(s)) return false;
+
+        // Fjern vanlige "wrapper"-kommandoer rundt enheter (\text{W}, \mathrm{km/h} osv.) og mellomrom-kommandoer
+        var stripped = s
+            .replace(/\\(text|mathrm|mathbf|mathit|rm)\s*\{([^}]*)\}/g, '$2')
+            .replace(/\\[,;:! ]/g, ' ')
+            .replace(/\\quad|\\qquad/g, ' ')
+            .trim();
+
+        // Etter opprydding: skal bare inneholde tall, mellomrom, og enkel enhetstekst (bokstaver/tegn) — ingen ekte formel-struktur igjen
+        if(/\\/.test(stripped)) return false; // fortsatt latex-kommandoer igjen → regn som ekte formel, ikke risk
+        if(!/\d/.test(stripped)) return false; // ingen tall i det hele tatt → sannsynligvis et symbol (f.eks. E_p), ikke en verdi
+        return /^[\d.,\s]*[a-zA-Z°%μΩ][a-zA-Z0-9°%μΩ\/\^\{\}_.\-+ ]*$/.test(stripped) ||
+               /^[\d.,\s]+$/.test(stripped);
     }
 
     function updateMissingFormulasBox(display){
