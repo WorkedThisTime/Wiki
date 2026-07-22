@@ -3378,11 +3378,7 @@
 
         var content1 = p.file.content || '';
         var content2 = p.file.content2 || '';
-        var mdText = content1 + (content2 ? '
-
----
-
-' + content2 : '');
+        var mdText = content1 + (content2 ? '\n\n---\n\n' + content2 : '');
         var result = customMarkdown(mdText);
         var html = injectWikiLinks(result.html, p.file.id);
         body.innerHTML = html;
