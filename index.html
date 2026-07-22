@@ -3284,24 +3284,31 @@
         bookFolderId = folderId;
         bookPages = [];
 
-        // Bygg sideliste: mapper på toppnivå = kapitler, undermapper = underkapitler
-        folder.children.forEach(function(child) {
-            if(child.type === 'file') {
-                bookPages.push({ file: child, chapter: folder.name, sub: '' });
-            } else if(child.type === 'folder') {
-                child.children && child.children.forEach(function(c2) {
-                    if(c2.type === 'file') {
-                        bookPages.push({ file: c2, chapter: child.name, sub: '' });
-                    } else if(c2.type === 'folder') {
-                        c2.children && c2.children.forEach(function(c3) {
-                            if(c3.type === 'file') {
-                                bookPages.push({ file: c3, chapter: child.name, sub: c2.name });
-                            }
-                        });
+        // Rekursiv traversering: dokumenter i noden først, deretter mapper i rekkefølge
+        // chapter = nærmeste mappe-forfar på nivå 1, sub = nærmeste på nivå 2+
+        function traverse(node, chapter, sub) {
+            if(!node || !Array.isArray(node.children)) return;
+            // 1. Dokumenter i denne noden
+            node.children.forEach(function(child) {
+                if(child.type === 'file') {
+                    bookPages.push({ file: child, chapter: chapter, sub: sub });
+                }
+            });
+            // 2. Undermapper i denne noden (i rekkefølge)
+            node.children.forEach(function(child) {
+                if(child.type === 'folder') {
+                    // Nivå 1 under rotmappen → nytt kapittel
+                    // Nivå 2+ → underkapittel
+                    if(node === folder) {
+                        traverse(child, child.name, '');
+                    } else {
+                        traverse(child, chapter, child.name);
                     }
-                });
-            }
-        });
+                }
+            });
+        }
+
+        traverse(folder, folder.name, '');
 
         if(bookPages.length === 0) { showToast('Ingen dokumenter i denne mappen.'); return; }
 
