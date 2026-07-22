@@ -3277,7 +3277,8 @@
         });
     }
 
-    function openBookReader(folderId) {
+    function openBookReader(e, folderId) {
+        if(e && e.stopPropagation) e.stopPropagation();
         var folder = findItemById(db, folderId);
         if(!folder || folder.type !== 'folder') return;
         bookFolderId = folderId;
