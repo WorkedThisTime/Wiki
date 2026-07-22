@@ -190,6 +190,39 @@
         .fp-empty { color:var(--text-muted); font-size:13px; font-style:italic; }
         .fp-edit-area { width:100%; font-family:monospace; font-size:12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-main); border-radius:6px; padding:8px; resize:vertical; min-height:80px; box-sizing:border-box; }
         .fp-hint { font-size:11px; color:var(--text-muted); margin-top:2px; }
+        /* ── BOK-LESER ── */
+        #book-reader { position:fixed; inset:0; z-index:7000; background:var(--bg); display:none; flex-direction:row; }
+        #book-reader.open { display:flex; }
+        #book-sidebar { width:280px; min-width:220px; max-width:320px; background:var(--header-bg); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; }
+        #book-sidebar-header { padding:18px 16px 10px; border-bottom:1px solid var(--border); flex-shrink:0; }
+        #book-title-main { font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:2px; word-break:break-word; }
+        #book-sidebar-search { width:100%; box-sizing:border-box; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:6px; color:var(--text-main); padding:6px 10px; font-size:12px; margin-top:8px; }
+        #book-toc { flex:1; overflow-y:auto; padding:8px 0; }
+        .btoc-chapter { padding:6px 14px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin-top:10px; }
+        .btoc-sub { padding:4px 14px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.45); text-transform:uppercase; letter-spacing:.06em; margin-top:6px; }
+        .btoc-page { display:flex; align-items:center; gap:8px; padding:7px 14px 7px 22px; cursor:pointer; font-size:13px; color:var(--text-muted); border-left:2px solid transparent; transition:.15s; }
+        .btoc-page:hover { background:rgba(255,255,255,0.05); color:var(--text-main); }
+        .btoc-page.active { color:var(--blue); border-left-color:var(--blue); background:rgba(91,143,255,0.08); }
+        .btoc-page-num { margin-left:auto; font-size:10px; opacity:.4; font-family:monospace; }
+        #book-main { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+        #book-topbar { display:flex; align-items:center; gap:10px; padding:10px 20px; border-bottom:1px solid var(--border); background:var(--header-bg); flex-shrink:0; }
+        #book-nav-prev, #book-nav-next { padding:6px 14px; font-size:12px; }
+        #book-page-indicator { font-size:12px; color:var(--text-muted); font-family:monospace; margin:0 auto; }
+        #book-content-wrap { flex:1; overflow-y:auto; padding:48px max(40px,calc(50% - 380px)); }
+        #book-content { max-width:760px; margin:0 auto; }
+        #book-chapter-heading { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--blue); margin-bottom:6px; }
+        #book-sub-heading { font-size:13px; color:var(--text-muted); margin-bottom:24px; font-weight:600; }
+        #book-page-title { font-size:2.2rem; font-weight:800; color:var(--text-main); margin-bottom:32px; line-height:1.2; }
+        #book-page-body { font-size:15px; line-height:1.8; color:var(--text-main); }
+        #book-page-nav { display:flex; justify-content:space-between; align-items:center; margin-top:60px; padding-top:24px; border-top:1px solid var(--border); }
+        .book-page-nav-btn { display:flex; flex-direction:column; gap:4px; max-width:45%; }
+        .book-page-nav-btn.next { align-items:flex-end; }
+        .bpnb-label { font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); }
+        .bpnb-title { font-size:13px; font-weight:600; color:var(--blue); cursor:pointer; }
+        .bpnb-title:hover { text-decoration:underline; }
+        #book-progress { height:2px; background:rgba(255,255,255,0.06); flex-shrink:0; }
+        #book-progress-bar { height:100%; background:var(--blue); transition:width .3s; }
+        @media(max-width:700px){ #book-sidebar{display:none;} #book-content-wrap{padding:24px 16px;} }
         #quickview-panel { position: fixed; top: 0; right: -500px; width: var(--panel-width); height: 100vh; background: var(--header-bg); backdrop-filter: blur(20px); border-left: 1px solid var(--border); z-index: 6000; transition: 0.4s cubic-bezier(0.16,1,0.3,1); padding: 40px; overflow-y: auto; box-shadow: -10px 0 40px rgba(0,0,0,0.5); }
         #quickview-panel.open { right: 0; }
         #qv-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 5999; display: none; backdrop-filter: blur(2px); pointer-events: none; }
@@ -537,6 +570,44 @@
 </div>
 
 <div id="toast-container"></div>
+
+<!-- BOK-LESER -->
+<div id="book-reader">
+    <div id="book-sidebar">
+        <div id="book-sidebar-header">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <button class="btn btn-outline" onclick="closeBookReader()" style="padding:4px 10px;font-size:11px;">← Tilbake</button>
+                <span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;">Bok</span>
+            </div>
+            <div id="book-title-main"></div>
+            <input id="book-sidebar-search" placeholder="Søk i boken..." oninput="bookSearch(this.value)" />
+        </div>
+        <div id="book-toc"></div>
+    </div>
+    <div id="book-main">
+        <div id="book-topbar">
+            <button class="btn btn-outline" id="book-nav-prev" onclick="bookNavPage(-1)">← Forrige</button>
+            <div id="book-page-indicator">1 / 1</div>
+            <button class="btn btn-outline" id="book-nav-next" onclick="bookNavPage(1)">Neste →</button>
+            <div style="margin-left:auto;display:flex;gap:8px;">
+                <button class="btn btn-outline" style="font-size:11px;padding:5px 10px;" onclick="document.getElementById('book-sidebar').style.display=document.getElementById('book-sidebar').style.display==='none'?'flex':'none'">☰</button>
+            </div>
+        </div>
+        <div id="book-progress"><div id="book-progress-bar" style="width:0%"></div></div>
+        <div id="book-content-wrap">
+            <div id="book-content">
+                <div id="book-chapter-heading"></div>
+                <div id="book-sub-heading"></div>
+                <div id="book-page-title"></div>
+                <div id="book-page-body"></div>
+                <div id="book-page-nav">
+                    <div class="book-page-nav-btn prev" id="book-prev-block"></div>
+                    <div class="book-page-nav-btn next" id="book-next-block"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <div id="qv-overlay" onclick="event.stopPropagation(); closeQuickView();"></div>
 <div id="missing-formulas-sidebar" style="display:none;position:fixed;top:150px;right:20px;width:250px;max-height:calc(100vh - 170px);overflow-y:auto;background:var(--header-bg);border:1px solid var(--border);border-radius:10px;padding:14px;z-index:400;box-shadow:0 8px 24px rgba(0,0,0,0.3);pointer-events:auto;">
     <div id="missing-formulas-title" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">⚠️ Formler uten forklaring</div>
@@ -2169,7 +2240,7 @@
             if(item.type==='folder'){
                 folderCount++; el.className="card";
                 if(item.thumbnail) el.style.backgroundImage = "url('"+item.thumbnail+"')";
-                var _fe=canUserEdit()?'<div class="item-actions"><button class="kebab-btn" onclick="toggleKebab(event,\'km-'+item.id+'\')">···</button><div class="kebab-menu" id="km-'+item.id+'"><button class="kebab-item" onclick="stopAndRun(event,renameItem,\''+item.id+'\')">✏️ Gi nytt navn</button><button class="kebab-item" onclick="stopAndRun(event,setThumbnail,\''+item.id+'\')">🖼️ Miniatyrbilde</button><button class="kebab-item" onclick="stopAndRun(event,openMoveModal,\''+item.id+'\')">📦 Flytt</button><button class="kebab-item" onclick="stopAndRun(event,copyItem,\''+item.id+'\')">📋 Kopier JSON</button><div class="kebab-sep"></div><button class="kebab-item danger" onclick="stopAndRun(event,deleteItem,\''+item.id+'\')">🗑️ Slett</button></div></div>':'';
+                var _fe=canUserEdit()?'<div class="item-actions"><button class="kebab-btn" onclick="toggleKebab(event,\'km-'+item.id+'\')">···</button><div class="kebab-menu" id="km-'+item.id+'"><button class="kebab-item" onclick="stopAndRun(event,renameItem,\''+item.id+'\')">✏️ Gi nytt navn</button><button class="kebab-item" onclick="stopAndRun(event,setThumbnail,\''+item.id+'\')">🖼️ Miniatyrbilde</button><button class="kebab-item" onclick="stopAndRun(event,openMoveModal,\''+item.id+'\')">📦 Flytt</button><button class="kebab-item" onclick="stopAndRun(event,copyItem,\''+item.id+'\')">📋 Kopier JSON</button><div class="kebab-sep"></div><button class="kebab-item" onclick="stopAndRun(event,openBookReader,\'\'+item.id+\'\')">📖 Åpne som bok</button><div class="kebab-sep"></div><button class="kebab-item danger" onclick="stopAndRun(event,deleteItem,\''+item.id+'\')">🗑️ Slett</button></div></div>':'';
                 el.innerHTML=_fe+'<div class="card-title-bar">'+sanitizeHTML(item.name)+'</div>';
                 el.onclick=function(){currentPath.push(item);render();};
                 fGrid.appendChild(el);
@@ -3184,6 +3255,181 @@
             openFormulaPanel(latex, el);
         });
     }
+
+    // ── BOK-LESER ──────────────────────────────────────────────────────
+    var bookPages = [];   // [{file, chapterName, subName, pageNum}]
+    var bookCurrent = 0;
+    var bookFolderId = null;
+
+    function buildBookPages(folderNode, chapterName, subName, pages) {
+        if(!folderNode || !Array.isArray(folderNode.children)) return;
+        folderNode.children.forEach(function(child) {
+            if(child.type === 'file') {
+                pages.push({ file: child, chapter: chapterName, sub: subName });
+            } else if(child.type === 'folder') {
+                // Mappe under toppnivå → underkapittel (sub)
+                if(chapterName === folderNode.name) {
+                    buildBookPages(child, chapterName, child.name, pages);
+                } else {
+                    buildBookPages(child, chapterName, child.name, pages);
+                }
+            }
+        });
+    }
+
+    function openBookReader(folderId) {
+        var folder = findItemById(db, folderId);
+        if(!folder || folder.type !== 'folder') return;
+        bookFolderId = folderId;
+        bookPages = [];
+
+        // Bygg sideliste: mapper på toppnivå = kapitler, undermapper = underkapitler
+        folder.children.forEach(function(child) {
+            if(child.type === 'file') {
+                bookPages.push({ file: child, chapter: folder.name, sub: '' });
+            } else if(child.type === 'folder') {
+                child.children && child.children.forEach(function(c2) {
+                    if(c2.type === 'file') {
+                        bookPages.push({ file: c2, chapter: child.name, sub: '' });
+                    } else if(c2.type === 'folder') {
+                        c2.children && c2.children.forEach(function(c3) {
+                            if(c3.type === 'file') {
+                                bookPages.push({ file: c3, chapter: child.name, sub: c2.name });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+
+        if(bookPages.length === 0) { showToast('Ingen dokumenter i denne mappen.'); return; }
+
+        document.getElementById('book-title-main').textContent = folder.name;
+        document.getElementById('book-reader').classList.add('open');
+        buildBookTOC();
+        bookGoTo(0);
+    }
+
+    function closeBookReader() {
+        document.getElementById('book-reader').classList.remove('open');
+        var body = document.getElementById('book-page-body');
+        if(body) { body.innerHTML = ''; destroyAllP5(); }
+    }
+
+    function buildBookTOC(filter) {
+        var toc = document.getElementById('book-toc');
+        toc.innerHTML = '';
+        var lastChapter = null, lastSub = null;
+        bookPages.forEach(function(p, i) {
+            if(filter && !(p.file.name.toLowerCase().includes(filter) || p.chapter.toLowerCase().includes(filter) || (p.sub && p.sub.toLowerCase().includes(filter)))) return;
+            if(p.chapter !== lastChapter) {
+                var ch = document.createElement('div');
+                ch.className = 'btoc-chapter'; ch.textContent = p.chapter;
+                toc.appendChild(ch); lastChapter = p.chapter; lastSub = null;
+            }
+            if(p.sub && p.sub !== lastSub) {
+                var sb = document.createElement('div');
+                sb.className = 'btoc-sub'; sb.textContent = p.sub;
+                toc.appendChild(sb); lastSub = p.sub;
+            }
+            var pg = document.createElement('div');
+            pg.className = 'btoc-page' + (i === bookCurrent ? ' active' : '');
+            pg.dataset.idx = i;
+            pg.innerHTML = '<span>' + sanitizeHTML(p.file.name) + '</span><span class="btoc-page-num">' + (i+1) + '</span>';
+            pg.onclick = function() { bookGoTo(parseInt(this.dataset.idx)); };
+            toc.appendChild(pg);
+        });
+    }
+
+    function bookSearch(val) { buildBookTOC(val.toLowerCase()); }
+
+    function bookGoTo(idx) {
+        if(idx < 0 || idx >= bookPages.length) return;
+        bookCurrent = idx;
+        var p = bookPages[idx];
+
+        // Oppdater TOC
+        document.querySelectorAll('.btoc-page').forEach(function(el) {
+            el.classList.toggle('active', parseInt(el.dataset.idx) === idx);
+        });
+
+        // Scroll aktiv side inn i sikte i TOC
+        var activeToc = document.querySelector('.btoc-page.active');
+        if(activeToc) activeToc.scrollIntoView({ block: 'nearest' });
+
+        // Oppdater headings
+        document.getElementById('book-chapter-heading').textContent = p.chapter;
+        document.getElementById('book-sub-heading').textContent = p.sub || '';
+        document.getElementById('book-page-title').textContent = p.file.name;
+
+        // Fremgang
+        var pct = bookPages.length > 1 ? (idx / (bookPages.length-1) * 100) : 100;
+        document.getElementById('book-progress-bar').style.width = pct + '%';
+        document.getElementById('book-page-indicator').textContent = (idx+1) + ' / ' + bookPages.length;
+
+        // Knapper
+        document.getElementById('book-nav-prev').disabled = idx === 0;
+        document.getElementById('book-nav-next').disabled = idx === bookPages.length-1;
+
+        // Innhold
+        var body = document.getElementById('book-page-body');
+        destroyAllP5();
+        body.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Laster...</div>';
+
+        var content1 = p.file.content || '';
+        var content2 = p.file.content2 || '';
+        var mdText = content1 + (content2 ? '
+
+---
+
+' + content2 : '');
+        var result = customMarkdown(mdText);
+        var html = injectWikiLinks(result.html, p.file.id);
+        body.innerHTML = html;
+
+        // Render math + code
+        if(katexReady) {
+            try { renderMathInElement(body, KATEX_CONFIG); } catch(e) {}
+            makeFormulasClickable(body);
+        }
+        if(window.Prism) Prism.highlightAllUnder(body);
+
+        // Animasjoner
+        var animCodes = getAnimCodes(p.file);
+        var animRefs = {};
+        (mdText.match(/\[anim:(\d+)\]/gi) || []).forEach(function(m) {
+            animRefs[parseInt(m.replace(/\D/g,''))-1] = true;
+        });
+        p5LoadTimeout = setTimeout(function() {
+            animCodes.forEach(function(code, i) {
+                if(!animRefs[i] || !code || !code.trim()) return;
+                var cid = 'p5-container-' + p.file.id + '-' + i;
+                if(document.getElementById(cid)) loadP5AnimationInto(cid, code);
+            });
+        }, 300);
+
+        // Forrige/neste-blokk nederst
+        var prev = bookPages[idx-1];
+        var next = bookPages[idx+1];
+        document.getElementById('book-prev-block').innerHTML = prev
+            ? '<span class="bpnb-label">← Forrige</span><span class="bpnb-title" onclick="bookGoTo('+(idx-1)+')">' + sanitizeHTML(prev.file.name) + '</span>' : '';
+        document.getElementById('book-next-block').innerHTML = next
+            ? '<span class="bpnb-label">Neste →</span><span class="bpnb-title" onclick="bookGoTo('+(idx+1)+')">' + sanitizeHTML(next.file.name) + '</span>' : '';
+
+        // Scroll til toppen
+        document.getElementById('book-content-wrap').scrollTo(0, 0);
+    }
+
+    function bookNavPage(dir) { bookGoTo(bookCurrent + dir); }
+
+    // Tastatursnarveier i bokleseren
+    document.addEventListener('keydown', function(e) {
+        if(!document.getElementById('book-reader').classList.contains('open')) return;
+        if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if(e.key === 'ArrowRight' || e.key === 'ArrowDown') bookNavPage(1);
+        if(e.key === 'ArrowLeft' || e.key === 'ArrowUp') bookNavPage(-1);
+        if(e.key === 'Escape') closeBookReader();
+    });
 
     function closeQuickView(){document.getElementById('quickview-panel').classList.remove('open');document.getElementById('qv-overlay').style.display="none";}
     function updateConnectionStatus(text,color){document.getElementById('status-text').innerText=text;document.getElementById('status-dot').style.background=color;}
