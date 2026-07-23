@@ -2763,6 +2763,7 @@
         var left = rect.right - menuW;
         var top = rect.bottom + 4;
         if(left < 4) left = 4;
+        if(left + menuW > window.innerWidth - 4) left = window.innerWidth - menuW - 4;
         if(top + menuH > window.innerHeight - 4) top = rect.top - menuH - 4;
         menu.style.left = left + 'px';
         menu.style.top = top + 'px';
