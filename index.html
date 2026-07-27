@@ -226,6 +226,15 @@
         #book-progress { height:2px; background:rgba(255,255,255,0.06); flex-shrink:0; }
         #book-progress-bar { height:100%; background:var(--blue); transition:width .3s; }
         @media(max-width:700px){ #book-sidebar{display:none;} #book-content-wrap{padding:24px 16px;} }
+        #formula-popup { position:fixed; z-index:7500; background:var(--header-bg); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,0.5); padding:16px; width:300px; max-width:calc(100vw - 32px); display:none; }
+        #formula-popup.open { display:block; }
+        #formula-popup .fpp-latex { background:rgba(91,143,255,0.07); border:1px solid rgba(91,143,255,0.18); border-radius:7px; padding:10px; text-align:center; margin-bottom:12px; overflow-x:auto; }
+        #formula-popup .fpp-body { font-size:13px; line-height:1.7; color:var(--text-main); }
+        #formula-popup .fpp-empty { font-size:12px; color:var(--text-muted); font-style:italic; }
+        #formula-popup .fpp-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+        #formula-popup .fpp-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--blue); }
+        #formula-popup .fpp-close { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:14px; padding:2px 6px; border-radius:4px; }
+        #formula-popup .fpp-close:hover { background:rgba(255,255,255,0.08); color:var(--text-main); }
         #quickview-panel { position: fixed; top: 0; right: -500px; width: var(--panel-width); height: 100vh; background: var(--header-bg); backdrop-filter: blur(20px); border-left: 1px solid var(--border); z-index: 6000; transition: 0.4s cubic-bezier(0.16,1,0.3,1); padding: 40px; overflow-y: auto; box-shadow: -10px 0 40px rgba(0,0,0,0.5); }
         #quickview-panel.open { right: 0; }
         #qv-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 5999; display: none; backdrop-filter: blur(2px); pointer-events: none; }
@@ -634,6 +643,15 @@
             <button class="btn btn-outline" onclick="deleteFormulaExplanation()" style="justify-content:center;">Slett</button>
         </div>
     </div>
+</div>
+
+<div id="formula-popup">
+    <div class="fpp-header">
+        <span class="fpp-label">🔍 Formel</span>
+        <button class="fpp-close" onclick="closeFormulaPopup()">×</button>
+    </div>
+    <div class="fpp-latex" id="fpp-latex"></div>
+    <div id="fpp-body"><div class="fpp-empty">Ingen forklaring lagt til.</div></div>
 </div>
 
 <div id="quickview-panel">
@@ -3129,6 +3147,12 @@
                 }
             }
         });
+        formulaDisplay.style.cursor = 'pointer';
+        formulaDisplay.title = 'Klikk for detaljvisning';
+        formulaDisplay.onclick = function(e){
+            e.stopPropagation();
+            openFormulaPopup(latex, formulaDisplay);
+        };
 
         // Vis forklaring
         var body = document.getElementById('fp-body');
@@ -3137,6 +3161,15 @@
             var rendered = customMarkdown(explanation);
             body.innerHTML = '<div class="fp-answer">' + rendered.html + '</div>';
             makeFormulasClickable(body);
+            // Formler i forklaringen åpner popup, ikke nytt panel
+            body.querySelectorAll('.katex-clickable').forEach(function(el){
+                el.onclick = function(e){
+                    e.stopPropagation();
+                    var ann = el.querySelector('annotation[encoding="application/x-tex"]');
+                    var ltx = ann ? ann.textContent.trim() : el.getAttribute('data-latex');
+                    if(ltx) openFormulaPopup(ltx, el);
+                };
+            });
         } else {
             body.innerHTML = '<div class="fp-empty">Ingen forklaring lagt til ennå.</div>';
         }
@@ -3155,6 +3188,43 @@
         var sidebar = document.getElementById('missing-formulas-sidebar');
         if(sidebar) sidebar.style.display = 'none';
     }
+
+    function openFormulaPopup(latex, sourceEl) {
+        var popup = document.getElementById('formula-popup');
+        var latexEl = document.getElementById('fpp-latex');
+        var bodyEl = document.getElementById('fpp-body');
+        latexEl.innerHTML = '';
+        try { katex.render(latex, latexEl, { throwOnError:false, displayMode:true }); }
+        catch(e) { latexEl.textContent = latex; }
+        var explanation = formulaDict[latexKey(latex)];
+        bodyEl.innerHTML = explanation
+            ? '<div class="fpp-body">' + sanitizeHTML(explanation) + '</div>'
+            : '<div class="fpp-empty">Ingen forklaring lagt til ennå.</div>';
+        popup.style.display = 'block';
+        popup.classList.add('open');
+        var rect = sourceEl ? sourceEl.getBoundingClientRect() : {right:window.innerWidth/2, top:100};
+        var pw = popup.offsetWidth, ph = popup.offsetHeight;
+        var left = rect.right + 12;
+        var top = rect.top;
+        if(left + pw > window.innerWidth - 8) left = rect.left - pw - 12;
+        if(left < 8) left = 8;
+        if(top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8;
+        if(top < 8) top = 8;
+        popup.style.left = left + 'px';
+        popup.style.top = top + 'px';
+    }
+
+    function closeFormulaPopup() {
+        var popup = document.getElementById('formula-popup');
+        if(popup){ popup.classList.remove('open'); popup.style.display = 'none'; }
+    }
+
+    document.addEventListener('click', function(e) {
+        var popup = document.getElementById('formula-popup');
+        if(popup && popup.classList.contains('open') && !popup.contains(e.target)) {
+            closeFormulaPopup();
+        }
+    });
 
     function closeFormulaPanel(){
         document.getElementById('formula-panel').classList.remove('open');
