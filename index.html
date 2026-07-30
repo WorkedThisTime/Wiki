@@ -230,8 +230,10 @@
         #book-progress { height:2px; background:rgba(255,255,255,0.06); flex-shrink:0; }
         #book-progress-bar { height:100%; background:var(--blue); transition:width .3s; }
         @media(max-width:700px){ #book-sidebar{display:none;} #book-content-wrap{padding:24px 16px;} }
-        #formula-popup, #word-popup { position:fixed; z-index:7500; background:var(--header-bg); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,0.5); padding:16px; width:300px; max-width:calc(100vw - 32px); display:none; }
+        #formula-popup { position:fixed; z-index:7500; background:var(--header-bg); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,0.5); padding:16px; width:300px; max-width:calc(100vw - 32px); display:none; }
         #formula-popup.open { display:block; }
+        #word-popup { position:fixed; top:0; right:-520px; width:480px; max-width:92vw; height:100vh; background:var(--header-bg); backdrop-filter:blur(20px); border-left:1px solid var(--border); z-index:7500; transition:0.35s cubic-bezier(0.16,1,0.3,1); padding:32px 28px; overflow-y:auto; box-shadow:-10px 0 40px rgba(0,0,0,0.5); display:flex; flex-direction:column; gap:16px; }
+        #word-popup.open { right:0; display:flex; }
         #formula-popup .fpp-latex { background:rgba(91,143,255,0.07); border:1px solid rgba(91,143,255,0.18); border-radius:7px; padding:10px; text-align:center; margin-bottom:12px; overflow-x:auto; }
         #formula-popup .fpp-body { font-size:13px; line-height:1.7; color:var(--text-main); }
         #formula-popup .fpp-empty { font-size:12px; color:var(--text-muted); font-style:italic; }
@@ -659,15 +661,17 @@
 </div>
 
 <div id="word-popup">
-    <div class="fpp-header">
-        <span class="fpp-label" id="wpp-word-label">📖 Ord</span>
-        <button class="fpp-close" onclick="closeWordPopup()">×</button>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <span style="color:var(--blue); font-weight:700; font-size:12px; letter-spacing:1px;">ORDFORKLARING</span>
+        <button class="icon-btn" onclick="closeWordPopup()" style="padding:5px 10px;">Lukk ×</button>
     </div>
-    <div id="wpp-body"><div class="fpp-empty">Ingen forklaring lagt til.</div></div>
-    <div id="wpp-editor" style="display:none;margin-top:12px;">
-        <textarea id="wpp-textarea" class="fp-edit-area" placeholder="Skriv ordforklaring her..."></textarea>
-        <div class="fp-hint">Lagres i ordboken og vises for alle lesere.</div>
-        <div style="display:flex;gap:8px;margin-top:8px;">
+    <h1 id="wpp-word-label" style="margin-bottom:20px; font-size:2rem;"></h1>
+    <div id="wpp-body" style="color:var(--text-main); line-height:1.6; font-size:15px;"><div class="fpp-empty">Ingen forklaring lagt til.</div></div>
+    <div id="wpp-editor" style="display:none;margin-top:24px;border-top:1px solid var(--border);padding-top:20px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:8px;">✏️ Rediger forklaring</div>
+        <textarea id="wpp-textarea" class="fp-edit-area" placeholder="Skriv ordforklaring her... (støtter Markdown og $formler$)"></textarea>
+        <div class="fp-hint" style="margin-top:4px;">Lagres i ordboken og vises for alle lesere.</div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
             <button class="btn btn-primary" onclick="saveWordExplanation()" style="flex:1;justify-content:center;">Lagre</button>
             <button class="btn btn-outline" onclick="deleteWordExplanation()">Slett</button>
         </div>
@@ -3236,7 +3240,11 @@
         wordDict[currentWordKey] = text;
         firebase.database().ref('wordDict/'+encodeWordKey(currentWordKey)).set(text).then(function(){
             showToast('Ordforklaring lagret!');
-            document.getElementById('wpp-body').innerHTML = '<div class="fpp-body">'+sanitizeHTML(text)+'</div>';
+            var rendered2 = customMarkdown(text);
+            var bd = document.getElementById('wpp-body');
+            bd.innerHTML = '<div class="fpp-body" style="font-size:15px;line-height:1.6;color:var(--text-main);">'+rendered2.html+'</div>';
+            if(katexReady){ try{ renderMathInElement(bd,KATEX_CONFIG); }catch(e){} }
+            if(window.Prism) Prism.highlightAllUnder(bd);
             // Marker ord som har forklaring
             document.querySelectorAll('.word-clickable').forEach(function(el){
                 if(wordKey(el.textContent)===currentWordKey) el.classList.add('has-word-def');
@@ -3260,11 +3268,17 @@
     function openWordPopup(word, sourceEl){
         var popup = document.getElementById('word-popup');
         currentWordKey = wordKey(word);
-        document.getElementById('wpp-word-label').textContent = '📖 '+word;
+        document.getElementById('wpp-word-label').textContent = word;
         var explanation = wordDict[currentWordKey];
-        document.getElementById('wpp-body').innerHTML = explanation
-            ? '<div class="fpp-body">'+sanitizeHTML(explanation)+'</div>'
-            : '<div class="fpp-empty">Ingen forklaring lagt til ennå.</div>';
+        var bodyEl = document.getElementById('wpp-body');
+        if(explanation){
+            var rendered = customMarkdown(explanation);
+            bodyEl.innerHTML = '<div class="fpp-body" style="font-size:15px;line-height:1.6;color:var(--text-main);">'+rendered.html+'</div>';
+            if(katexReady){ try{ renderMathInElement(bodyEl,KATEX_CONFIG); }catch(e){} }
+            if(window.Prism) Prism.highlightAllUnder(bodyEl);
+        } else {
+            bodyEl.innerHTML = '<div class="fpp-empty">Ingen forklaring lagt til ennå.</div>';
+        }
         var editor = document.getElementById('wpp-editor');
         var ta = document.getElementById('wpp-textarea');
         if(currentRole==='editor'||currentRole==='admin'){
@@ -3273,16 +3287,12 @@
         } else {
             editor.style.display='none';
         }
-        popup.style.display='block';
         popup.classList.add('open');
-        popup.style.right='16px';
-        popup.style.left='auto';
-        popup.style.top='80px';
     }
 
     function closeWordPopup(){
         var popup = document.getElementById('word-popup');
-        if(popup){ popup.classList.remove('open'); popup.style.display='none'; }
+        if(popup){ popup.classList.remove('open'); }
         currentWordKey = null;
     }
 
