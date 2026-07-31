@@ -3049,6 +3049,8 @@
         if(/^-?\d+(\.\d+)?\s*(°|\\circ|\\degree)$/.test(s)) return true;
         // Bare tall, evt. med enkel potens (3.0\times10^8)
         if(/^-?\d+(\.\d+)?(\s*\\times\s*10\^\{?-?\d+\}?)?$/.test(s)) return true;
+        // Enkel tilordning: n=1, x=6, t=0, v_0=5 osv. (bokstav(er) = tall)
+        if(/^[a-zA-Z][a-zA-Z0-9_{}^]*\s*=\s*-?[\d.,]+$/.test(s)) return true;
         // Har likhetstegn eller ekte strukturelle kommandoer → ekte formel
         if(/=/.test(s)) return false;
         if(/\\frac|\\sqrt|\\sum|\\int|\\vec|\\Delta|\\partial|\\nabla|\\cdot|\\pm|\\to\b|\\rightarrow/.test(s)) return false;
