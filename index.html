@@ -3010,7 +3010,7 @@
             .replace(/\\[,;:!]|\\ /g, '')
             .replace(/\\quad|\\qquad/g, '')
             .replace(/\s+/g, '');  // Fjern ALLE mellomrom — $gt^2$ og $g t^2$ blir like
-        return s.toLowerCase();
+        return s;
     }
 
     function decodeFormulaKey(encoded){
@@ -3030,7 +3030,10 @@
                         // Gamle, feilaktig nøstede oppføringer (fra før skråstrek ble kryptert riktig)
                         flatten(val, fullKey);
                     } else if(typeof val === 'string'){
-                        formulaDict[decodeFormulaKey(fullKey)] = val;
+                        var decoded = decodeFormulaKey(fullKey);
+                        // Lagre både med original nøkkel OG normalisert nøkkel
+                        formulaDict[decoded] = val;
+                        formulaDict[latexKey(decoded)] = val;
                     }
                 });
             }
