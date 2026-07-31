@@ -3003,16 +3003,14 @@
     var currentFormulaIsDisplay = false;
 
     function latexKey(latex){
-        var s = latex.trim().replace(/\s+/g,' ');
-        // Normaliser ulike måter å skrive enheter/mellomrom på, slik at like formler
-        // (f.eks. "9,81 \, m/s^2" og "9,81 \text{ m/s}^2") får samme nøkkel
+        var s = latex.trim();
+        // Normaliser slik at mellomrom og display-modus ikke gir ulike nøkler
         s = s
-            .replace(/\\(text|mathrm|mathbf|mathit|rm)\s*\{([^}]*)\}/g, '$2') // pakk ut \text{...} osv.
-            .replace(/\\[,;:!]|\\ /g, ' ')   // \, \; \: \! \(mellomrom) → vanlig mellomrom
-            .replace(/\\quad|\\qquad/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-        return s;
+            .replace(/\\(text|mathrm|mathbf|mathit|rm)\s*\{([^}]*)\}/g, '$2')
+            .replace(/\\[,;:!]|\\ /g, '')
+            .replace(/\\quad|\\qquad/g, '')
+            .replace(/\s+/g, '');  // Fjern ALLE mellomrom — $gt^2$ og $g t^2$ blir like
+        return s.toLowerCase();
     }
 
     function decodeFormulaKey(encoded){
