@@ -241,6 +241,13 @@
         #formula-popup .fpp-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--blue); }
         #formula-popup .fpp-close { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:14px; padding:2px 6px; border-radius:4px; }
         #formula-popup .fpp-close:hover { background:rgba(255,255,255,0.08); color:var(--text-main); }
+        .fep-row { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
+        .fep-row.excluded { opacity:0.5; border-color:rgba(255,0,0,0.2); background:rgba(255,0,0,0.04); }
+        .fep-latex { flex:1; overflow-x:auto; font-size:13px; }
+        .fep-toggle { flex-shrink:0; font-size:11px; padding:4px 10px; border-radius:5px; cursor:pointer; border:1px solid var(--border); background:rgba(255,255,255,0.04); color:var(--text-muted); }
+        .fep-toggle:hover { background:rgba(255,0,0,0.1); color:#f87171; border-color:rgba(255,0,0,0.3); }
+        .fep-toggle.is-excluded { background:rgba(255,0,0,0.1); color:#f87171; border-color:rgba(255,0,0,0.3); }
+        .fep-toggle.is-excluded:hover { background:rgba(34,197,94,0.1); color:#4ade80; border-color:rgba(34,197,94,0.3); }
         #quickview-panel { position: fixed; top: 0; right: -500px; width: var(--panel-width); height: 100vh; background: var(--header-bg); backdrop-filter: blur(20px); border-left: 1px solid var(--border); z-index: 6000; transition: 0.4s cubic-bezier(0.16,1,0.3,1); padding: 40px; overflow-y: auto; box-shadow: -10px 0 40px rgba(0,0,0,0.5); }
         #quickview-panel.open { right: 0; }
         #qv-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 5999; display: none; backdrop-filter: blur(2px); pointer-events: none; }
@@ -678,6 +685,15 @@
     </div>
 </div>
 
+<div id="formula-exclude-panel" style="display:none;position:fixed;top:0;right:0;width:400px;max-width:95vw;height:100vh;background:var(--header-bg);border-left:1px solid var(--border);z-index:8000;padding:28px 22px;overflow-y:auto;box-shadow:-8px 0 30px rgba(0,0,0,0.4);flex-direction:column;gap:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <span style="color:var(--blue);font-weight:700;font-size:12px;letter-spacing:1px;">🚫 EKSKLUDER FORMLER</span>
+        <button class="icon-btn" onclick="closeFormulaExcludePanel()" style="padding:5px 10px;">Lukk ×</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Merk formler som ikke trenger forklaring. De vil ikke lenger vises som klikkbare for lesere.</div>
+    <div id="fep-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+</div>
+
 <div id="quickview-panel">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
         <span style="color:var(--blue); font-weight:700; font-size:12px; letter-spacing:1px;">HURTIGOPPSLAG</span>
@@ -1040,6 +1056,7 @@
                         <input type="file" id="tab-image-file-input" style="display:none;" accept="image/*">
                         </label>
                         <button class="toolbar-btn" onclick="insertTabBlock()">🗂️ Sett inn faner</button>
+                        <button class="toolbar-btn" onclick="openFormulaExcludePanel()">🚫 Ekskluder formler</button>
                         <button class="toolbar-btn" onclick="insertWidgetBlock()">🎬 Sett inn animasjon</button>
                         <div class="upload-progress" id="upload-progress">
                             <div class="spinner"></div>
@@ -3485,7 +3502,8 @@
             var latex = el.getAttribute('data-latex') || '';
             latex = latex.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
             if(!latex) return;
-            if(isPlainQuantity(latex)) return; // Hopp over vinkler og enkle tall
+            if(isPlainQuantity(latex)) return;
+            if(excludedFormulas[latexKey(latex)]) return; // Ekskludert av editor
             openFormulaPanel(latex, el);
         });
     }
@@ -3668,6 +3686,91 @@
         if(e.key === 'ArrowLeft' || e.key === 'ArrowUp') bookNavPage(-1);
         if(e.key === 'Escape') closeBookReader();
     });
+
+    // ── FORMEL-EKSKLUDERING ─────────────────────────────────────────
+    var excludedFormulas = {}; // { latexKey: true }
+
+    function loadExcludedFormulas(cb){
+        firebase.database().ref('excludedFormulas').once('value').then(function(snap){
+            var val = snap.val() || {};
+            excludedFormulas = {};
+            Object.keys(val).forEach(function(k){
+                excludedFormulas[decodeFormulaKey(k)] = true;
+                excludedFormulas[latexKey(decodeFormulaKey(k))] = true;
+            });
+            if(cb) cb();
+        }).catch(function(){ excludedFormulas={}; if(cb) cb(); });
+    }
+
+    function openFormulaExcludePanel(){
+        var panel = document.getElementById('formula-exclude-panel');
+        var list = document.getElementById('fep-list');
+        panel.style.display = 'flex';
+
+        // Finn alle formler i det aktive dokumentet
+        var display = document.getElementById('text-display');
+        if(!display){ list.innerHTML='<div style="color:var(--text-muted);font-size:13px;">Åpne et dokument først.</div>'; return; }
+
+        var formulas = [];
+        var seen = {};
+        display.querySelectorAll('.math-clickable').forEach(function(el){
+            var latex = el.getAttribute('data-latex') || '';
+            latex = latex.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+            if(!latex || isPlainQuantity(latex)) return;
+            var key = latexKey(latex);
+            if(seen[key]) return;
+            seen[key] = true;
+            formulas.push({ latex: latex, key: key });
+        });
+
+        if(formulas.length === 0){
+            list.innerHTML='<div style="color:var(--text-muted);font-size:13px;">Ingen formler funnet i dokumentet.</div>';
+            return;
+        }
+
+        list.innerHTML = '';
+        formulas.forEach(function(f){
+            var isExcl = !!excludedFormulas[f.key];
+            var row = document.createElement('div');
+            row.className = 'fep-row' + (isExcl ? ' excluded' : '');
+            row.dataset.key = f.key;
+
+            var latexEl = document.createElement('div');
+            latexEl.className = 'fep-latex';
+            try { katex.render(f.latex, latexEl, { throwOnError:false, displayMode:false }); }
+            catch(e){ latexEl.textContent = f.latex; }
+
+            var btn = document.createElement('button');
+            btn.className = 'fep-toggle' + (isExcl ? ' is-excluded' : '');
+            btn.textContent = isExcl ? 'Gjenopprett' : 'Ekskluder';
+            btn.onclick = function(){
+                var key = f.key;
+                if(excludedFormulas[key]){
+                    delete excludedFormulas[key];
+                    firebase.database().ref('excludedFormulas/'+encodeFormulaKey(key)).remove();
+                    row.classList.remove('excluded');
+                    btn.classList.remove('is-excluded');
+                    btn.textContent = 'Ekskluder';
+                    showToast('Formel gjenopprettet');
+                } else {
+                    excludedFormulas[key] = true;
+                    firebase.database().ref('excludedFormulas/'+encodeFormulaKey(key)).set(true);
+                    row.classList.add('excluded');
+                    btn.classList.add('is-excluded');
+                    btn.textContent = 'Gjenopprett';
+                    showToast('Formel ekskludert');
+                }
+            };
+
+            row.appendChild(latexEl);
+            row.appendChild(btn);
+            list.appendChild(row);
+        });
+    }
+
+    function closeFormulaExcludePanel(){
+        document.getElementById('formula-exclude-panel').style.display = 'none';
+    }
 
     function closeQuickView(){document.getElementById('quickview-panel').classList.remove('open');document.getElementById('qv-overlay').style.display="none";}
     function updateConnectionStatus(text,color){document.getElementById('status-text').innerText=text;document.getElementById('status-dot').style.background=color;}
@@ -5036,7 +5139,7 @@
             var leftBtns = document.getElementById('header-left-btns');
             if(leftBtns) leftBtns.style.display = 'none';
         }
-        initializeDatabase(); loadFormulaDict(); loadWordDict(); updateClock(); setInterval(updateClock,1000); render();
+        initializeDatabase(); loadFormulaDict(); loadWordDict(); loadExcludedFormulas(); updateClock(); setInterval(updateClock,1000); render();
         checkLock();
         initAuth();
         window.addEventListener('resize', function(){
