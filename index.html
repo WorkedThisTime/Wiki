@@ -3313,7 +3313,7 @@
 
     function copyWordTemplate(){
         var word = document.getElementById('wpp-word-label').textContent;
-        var template = '**'+word+'** ({symbol}, {enhet})\n{Kort definisjon på 1-2 setninger. Encyklopedisk og saklig, samme tone som artiklene.}\n$$\n{hovedformel hvis relevant}\n$$\n* **{Delbegrep/variabel}:** {kort forklaring}\n* **{Delbegrep/variabel}:** {kort forklaring}\n*Brukes i:* {kort kontekstsetning – f.eks. hvor/når begrepet er relevant}\n→ [Les mer i hovedartikkelen: {Artikkelnavn}](#lenke)';
+        var template = 'Skriv en ordforklaring for begrepet "'+word+'" på norsk bokmål. Svar kun med innholdet i en kodeboks, ingen forklaring rundt. Bruk denne strukturen nøyaktig:\n\n**'+word+'** ({symbol}, {enhet})\n{Kort definisjon på 1-2 setninger. Encyklopedisk og saklig.}\n$$\n{hovedformel hvis relevant}\n$$\n* **{Delbegrep/variabel}:** {kort forklaring}\n* **{Delbegrep/variabel}:** {kort forklaring}\n*Brukes i:* {kort kontekstsetning – f.eks. hvor/når begrepet er relevant}';
         navigator.clipboard.writeText(template).then(function(){
             var btn = document.getElementById('wpp-copy-btn');
             btn.textContent = '✅ Kopiert!';
