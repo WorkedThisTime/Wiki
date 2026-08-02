@@ -676,6 +676,7 @@
     <div id="wpp-body" style="color:var(--text-main); line-height:1.6; font-size:15px;"><div class="fpp-empty">Ingen forklaring lagt til.</div></div>
     <div id="wpp-editor" style="display:none;margin-top:24px;border-top:1px solid var(--border);padding-top:20px;">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:8px;">✏️ Rediger forklaring</div>
+        <button class="btn btn-outline" id="wpp-copy-btn" onclick="copyWordTemplate()" style="width:100%;justify-content:center;margin-bottom:8px;font-size:12px;">📋 Kopier mal for Gemini</button>
         <textarea id="wpp-textarea" class="fp-edit-area" placeholder="Skriv ordforklaring her... (støtter Markdown og $formler$)"></textarea>
         <div class="fp-hint" style="margin-top:4px;">Lagres i ordboken og vises for alle lesere.</div>
         <div style="display:flex;gap:8px;margin-top:10px;">
@@ -3303,16 +3304,21 @@
         var ta = document.getElementById('wpp-textarea');
         if(currentRole==='editor'||currentRole==='admin'){
             editor.style.display='block';
-            if(explanation){
-                ta.value = explanation;
-            } else {
-                // Mal for Gemini
-                ta.value = '**'+word+'** ({symbol}, {enhet})\n{Kort definisjon på 1-2 setninger. Encyklopedisk og saklig, samme tone som artiklene.}\n$$\n{hovedformel hvis relevant}\n$$\n* **{Delbegrep/variabel}:** {kort forklaring}\n* **{Delbegrep/variabel}:** {kort forklaring}\n*Brukes i:* {kort kontekstsetning – f.eks. hvor/når begrepet er relevant}\n→ [Les mer i hovedartikkelen: {Artikkelnavn}](#lenke)';
-            }
+            ta.value = explanation||'';
         } else {
             editor.style.display='none';
         }
         popup.classList.add('open');
+    }
+
+    function copyWordTemplate(){
+        var word = document.getElementById('wpp-word-label').textContent;
+        var template = '**'+word+'** ({symbol}, {enhet})\n{Kort definisjon på 1-2 setninger. Encyklopedisk og saklig, samme tone som artiklene.}\n$$\n{hovedformel hvis relevant}\n$$\n* **{Delbegrep/variabel}:** {kort forklaring}\n* **{Delbegrep/variabel}:** {kort forklaring}\n*Brukes i:* {kort kontekstsetning – f.eks. hvor/når begrepet er relevant}\n→ [Les mer i hovedartikkelen: {Artikkelnavn}](#lenke)';
+        navigator.clipboard.writeText(template).then(function(){
+            var btn = document.getElementById('wpp-copy-btn');
+            btn.textContent = '✅ Kopiert!';
+            setTimeout(function(){ btn.textContent = '📋 Kopier mal for Gemini'; }, 2000);
+        });
     }
 
     function closeWordPopup(){
