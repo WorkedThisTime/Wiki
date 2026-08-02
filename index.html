@@ -3120,7 +3120,7 @@
             var key = latexKey(raw);
             if(seen[key]) return;
             seen[key] = true;
-            if(!formulaDict[key]){
+            if(!formulaDict[key] && !excludedFormulas[key]){
                 missing.push({ latex: raw, key: key });
             }
         });
@@ -3151,15 +3151,43 @@
             var row = document.createElement('div');
             row.className = 'missing-formula-row';
             row.setAttribute('data-idx', idx);
-            row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer;';
+            row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;cursor:pointer;';
+
             var latexSpan = document.createElement('span');
-            latexSpan.style.cssText = 'font-size:13px;color:var(--text-main);overflow:hidden;pointer-events:none;';
+            latexSpan.style.cssText = 'font-size:12px;color:var(--text-main);overflow:hidden;flex:1;pointer-events:none;';
             try{ katex.render(m.latex, latexSpan, {throwOnError:false, displayMode:false}); }
             catch(e){ latexSpan.textContent = m.latex; }
+
             var addBtn = document.createElement('span');
-            addBtn.textContent = '+ Legg til';
-            addBtn.style.cssText = 'font-size:11px;color:var(--danger);font-weight:600;flex-shrink:0;pointer-events:none;';
+            addBtn.textContent = '+';
+            addBtn.title = 'Legg til forklaring';
+            addBtn.style.cssText = 'font-size:11px;color:var(--danger);font-weight:700;flex-shrink:0;pointer-events:none;';
+
+            var exclBtn = document.createElement('button');
+            exclBtn.textContent = '🚫';
+            exclBtn.title = 'Ekskluder — trenger ingen forklaring';
+            exclBtn.style.cssText = 'font-size:11px;background:none;border:none;cursor:pointer;opacity:0.5;flex-shrink:0;padding:0 2px;';
+            exclBtn.onclick = function(e){
+                e.stopPropagation();
+                excludedFormulas[m.key] = true;
+                firebase.database().ref('excludedFormulas/'+encodeFormulaKey(m.key)).set(true).then(function(){
+                    showToast('Formel ekskludert');
+                    row.remove();
+                    // Oppdater teller
+                    var remaining = list.querySelectorAll('.missing-formula-row').length;
+                    if(remaining === 0){
+                        box.style.background = 'rgba(63,185,80,0.08)';
+                        box.style.borderColor = 'rgba(63,185,80,0.35)';
+                        title.style.color = '#3fb950';
+                        title.textContent = '✅ Alle formler har forklaring';
+                    } else {
+                        title.textContent = '⚠️ Formler uten forklaring (' + remaining + ')';
+                    }
+                });
+            };
+
             row.appendChild(latexSpan);
+            row.appendChild(exclBtn);
             row.appendChild(addBtn);
             list.appendChild(row);
         });
@@ -3313,7 +3341,7 @@
 
     function copyWordTemplate(){
         var word = document.getElementById('wpp-word-label').textContent;
-        var template = 'Skriv en ordforklaring for begrepet "'+word+'" på norsk bokmål. Svar kun med innholdet i en kodeboks, ingen forklaring rundt. Bruk denne strukturen nøyaktig:\n\n**'+word+'** ({symbol}, {enhet})\n{Kort definisjon på 1-2 setninger. Encyklopedisk og saklig.}\n$$\n{hovedformel hvis relevant}\n$$\n* **{Delbegrep/variabel}:** {kort forklaring}\n* **{Delbegrep/variabel}:** {kort forklaring}\n*Brukes i:* {kort kontekstsetning – f.eks. hvor/når begrepet er relevant}';
+        var template = 'Skriv en ordforklaring for begrepet "'+word+'" på norsk bokmål. Svar kun med innholdet i en kodeboks, ingen forklaring rundt. Bruk denne strukturen nøyaktig:\n\n**'+word+'** ({symbol}, {enhet})\n{Kort definisjon på 1-2 setninger. Encyklopedisk og saklig.}\n$$\n{hovedformel hvis relevant}\n$$\n* **${Variabel}$:** {kort forklaring}\n* **${Variabel}$:** {kort forklaring}\n*Brukes i:* {kort kontekstsetning – f.eks. hvor/når begrepet er relevant}\n\nVIKTIG: Alle matematiske symboler og variabler MÅ pakkes inn i $...$, også i punktlister. Eksempel: **$\\Delta t$:** ikke **\\Delta t:**';
         navigator.clipboard.writeText(template).then(function(){
             var btn = document.getElementById('wpp-copy-btn');
             btn.textContent = '✅ Kopiert!';
