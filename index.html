@@ -3462,34 +3462,36 @@
     function copyFormulaLatex(){
         if(!currentFormulaRawLatex){ showToast('Ingen formel valgt.'); return; }
         var latexFormatted = currentFormulaIsDisplay ? ('$$' + currentFormulaRawLatex + '$$') : ('$' + currentFormulaRawLatex + '$');
-        var text = 'Forklar dette matematiske/fysiske symbolet eller denne formelen i Markdown, tilpasset en norsk vitenskapswiki for videregående-elever.
-
-FØLG DENNE STRUKTUREN NØYAKTIG:
-1. Start med ÉN kort setning (maks 3) om hva symbolet/formelen representerer generelt.
-2. Legg inn en TOM LINJE.
-3. Bruk en punktliste med * for detaljer/betydninger. Maks 4-5 punkter.
-4. Ingen tittel, ingen skillelinje, ingen kilder, ingen oppsummering, ingen sitat.
-
-FOR HVERT PUNKT I LISTEN:
-- Format: **Begrep:** forklaring
-- Lengde: 1-3 enkle setninger
-- Du kan vise ÉN kort formel per punkt hvis relevant, men ALDRI en full utledning
-- Skriv symbolet KUN i dollartegn: $s$, ikke s
-- Skriv symbolet ÉN gang per setning
-
-SPRÅK:
-- Norsk bokmål, enkelt og konkret – for en videregående-elev
-- Unngå avanserte fagord – bruk vanlige ord
-- Forklar fagbegreper første gang de introduseres
-
-FORMATREGLER FOR MATEMATIKK:
-- Inline: $F = ma$
-- Egen linje (kun hvis nødvendig): $$F = G \frac{m_1 m_2}{r^2}$$
-- Kursiver fremmedord: *frekvens*
-
-Fag: matematikk/fysikk, videregående nivå
-
-Symbol/formel: ' + latexFormatted;
+        var text = [
+            'Forklar dette matematiske/fysiske symbolet eller denne formelen i Markdown,',
+            'tilpasset en norsk vitenskapswiki for videregående-elever.',
+            '',
+            'FØLG DENNE STRUKTUREN NØYAKTIG:',
+            '1. Start med ÉN kort setning (maks 3) om hva symbolet/formelen representerer generelt.',
+            '2. Legg inn en TOM LINJE.',
+            '3. Bruk en punktliste med * for detaljer/betydninger. Maks 4-5 punkter.',
+            '4. Ingen tittel, ingen skillelinje, ingen kilder, ingen oppsummering, ingen sitat.',
+            '',
+            'FOR HVERT PUNKT I LISTEN:',
+            '- Format: **Begrep:** forklaring',
+            '- Lengde: 1-3 enkle setninger',
+            '- Du kan vise ÉN kort formel per punkt hvis relevant, men ALDRI en full utledning',
+            '- Skriv symbolet KUN i dollartegn: $s$, ikke s',
+            '- Skriv symbolet ÉN gang per setning',
+            '',
+            'SPRÅK:',
+            '- Norsk bokmål, enkelt og konkret – for en videregående-elev',
+            '- Unngå avanserte fagord – bruk vanlige ord',
+            '- Forklar fagbegreper første gang de introduseres',
+            '',
+            'FORMATREGLER FOR MATEMATIKK:',
+            '- Inline: $F = ma$',
+            '- Kursiver fremmedord: *frekvens*',
+            '',
+            'Fag: matematikk/fysikk, videregående nivå',
+            '',
+            'Symbol/formel: ' + latexFormatted
+        ].join('\n');
         var doFallbackCopy = function(){
             var ta = document.createElement('textarea');
             ta.value = text;
