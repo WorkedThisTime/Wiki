@@ -2664,7 +2664,10 @@
         }
     }
     function goHome(){currentPath=[db];isEditing=false;document.body.classList.remove('is-editing');render();}
-    function goBack(){ destroyAllP5();if(currentPath.length>1){currentPath.pop();isEditing=false;document.body.classList.remove('is-editing');render();}}
+    function goBack(){ destroyAllP5();
+        var mfSidebar=document.getElementById('missing-formulas-sidebar');
+        if(mfSidebar) mfSidebar.style.display='none';
+        if(currentPath.length>1){currentPath.pop();isEditing=false;document.body.classList.remove('is-editing');render();}}
 
     function createNew(type){
         var name=prompt(type==='folder'?'Mappenavn:':'Artikkelnavn:');
@@ -2747,6 +2750,10 @@
 
     function navigateToId(id){
         destroyAllP5();
+        var mfSidebar=document.getElementById('missing-formulas-sidebar');
+        if(mfSidebar) mfSidebar.style.display='none';
+        closeFormulaPanel();
+        closeWordPopup();
         var path=[];
         var search=function(node,p){ if(!node) return false; if(node.id===id){path=[].concat(p,[node]);return true;} if(Array.isArray(node.children)){for(var i=0;i<node.children.length;i++){if(search(node.children[i],[].concat(p,[node]))) return true;}} return false; };
         if(search(db,[])){currentPath=path;isEditing=false;document.body.classList.remove('is-editing');closeSearch();closeQuickView();render();}
