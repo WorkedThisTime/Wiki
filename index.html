@@ -3349,11 +3349,31 @@
 
     function copyWordTemplate(){
         var word = document.getElementById('wpp-word-label').textContent;
-        var template = 'Skriv en ordforklaring for begrepet "'+word+'" på norsk bokmål. Svar kun med innholdet i en kodeboks, ingen forklaring rundt. Bruk denne strukturen nøyaktig:\n\n**'+word+'** ({symbol}, {enhet})\n{Kort definisjon på 1-2 setninger. Encyklopedisk og saklig.}\n$$\n{hovedformel hvis relevant}\n$$\n* **${Variabel}$:** {kort forklaring}\n* **${Variabel}$:** {kort forklaring}\n*Brukes i:* {kort kontekstsetning – f.eks. hvor/når begrepet er relevant}\n\nVIKTIG: Alle matematiske symboler og variabler MÅ pakkes inn i $...$, også i punktlister. Eksempel: **$\\Delta t$:** ikke **\\Delta t:**';
+        var template = [
+            'Skriv en kort ordforklaring for begrepet "' + word + '" på norsk bokmål.',
+            'Svar KUN med innholdet i en kodeblokk, ingen tekst rundt.',
+            '',
+            'BRUK DENNE STRUKTUREN NØYAKTIG:',
+            '',
+            '**' + word + '** (symbol hvis det finnes, enhet hvis det finnes — skriv Ingen hvis det ikke finnes)',
+            '{1-2 setninger som forklarer hva begrepet er. Encyklopedisk og saklig.}',
+            '',
+            '* **{Relatert begrep eller delbegrep}:** {1 setning forklaring}',
+            '* **{Relatert begrep eller delbegrep}:** {1 setning forklaring}',
+            '',
+            '*Brukes i:* {kort setning om hvor/når begrepet er relevant}',
+            '',
+            'REGLER:',
+            '- Alle matematiske symboler og variabler MÅ pakkes inn i $...$: **$x$:** ikke **x:**',
+            '- *Brukes i:* skal alltid stå på egen linje ETTER punktlisten, ikke inni et punkt',
+            '- Utelat formelblokken ($$...$$) hvis begrepet ikke har en sentral formel',
+            '- Maksimalt 4 punkter i listen',
+            '- Norsk bokmål, enkelt språk for videregående-elever'
+        ].join('\n');
         navigator.clipboard.writeText(template).then(function(){
             var btn = document.getElementById('wpp-copy-btn');
-            btn.textContent = '✅ Kopiert!';
-            setTimeout(function(){ btn.textContent = '📋 Kopier mal for Gemini'; }, 2000);
+            btn.textContent = '\u2705 Kopiert!';
+            setTimeout(function(){ btn.textContent = '\uD83D\uDCCB Kopier mal for Gemini'; }, 2000);
         });
     }
 
