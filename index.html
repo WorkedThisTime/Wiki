@@ -3351,25 +3351,29 @@
         var word = document.getElementById('wpp-word-label').textContent;
         var template = [
             'Skriv en ordforklaring for begrepet "' + word + '" på norsk bokmål.',
-            'Svar KUN med selve innholdet i en kodeblokk — ingen tekst utenfor.',
+            'Svar KUN med innholdet i en kodeblokk.',
             '',
-            'FORMAT (følg nøyaktig):',
+            'EKSEMPEL PÅ KORREKT FORMAT (kopier strukturen nøyaktig):',
             '',
-            '**' + word + '**',
-            '{2-3 setninger som forklarer HVA begrepet er og HVORDAN det fungerer, enkelt og konkret.}',
+            '**Eksempelbegrep**',
             '',
-            '* **{Underbegrep eller eksempel}:** {1 setning}',
-            '* **{Underbegrep eller eksempel}:** {1 setning}',
+            'To til tre setninger som forklarer hva begrepet er og hvordan det fungerer.',
             '',
-            '*Brukes i:* {én setning om hvor begrepet dukker opp i praksis}',
+            '* **Underbegrep 1:** En setning om dette underbegrepet.',
+            '* **Underbegrep 2:** En setning om dette underbegrepet.',
             '',
-            'REGLER:',
-            '- IKKE skriv (symbol, enhet) etter tittelen',
-            '- IKKE gjenta ordet i første setning — hopp rett på forklaringen',
-            '- *Brukes i:* skal stå på EGEN LINJE etter punktlisten, ALDRI inni et punkt',
-            '- Alle matematiske symboler MÅ pakkes i $...$: **$T$:** ikke **T:**',
-            '- Maks 3 punkter i listen',
-            '- Enkelt norsk bokmål for en videregående-elev — unngå tunge faguttrykk uten forklaring'
+            '*Brukes i:* En setning om hvor begrepet brukes i praksis.',
+            '',
+            '---',
+            '',
+            'VIKTIG — følg disse reglene:',
+            '- Tittelen (**' + word + '**) skal stå på EN EGEN LINJE med TOM LINJE etter',
+            '- Forklaringsteksten skal stå på EN EGEN LINJE med TOM LINJE etter',
+            '- Punktlisten kommer etter forklaringen, med TOM LINJE mellom hvert punkt',
+            '- *Brukes i:* skal stå på HELT EGEN LINJE etter punktlisten',
+            '- IKKE skriv ordet i starten av forklaringsteksten',
+            '- Alle symboler i $...$: **$T$:** ikke **T:**',
+            '- Maks 3 punkter'
         ].join('\n');
         navigator.clipboard.writeText(template).then(function(){
             var btn = document.getElementById('wpp-copy-btn');
