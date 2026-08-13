@@ -571,16 +571,45 @@
 <div id="admin-modal" onclick="closeAdminPanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99998;align-items:center;justify-content:center;">
     <div onclick="event.stopPropagation()" style="background:#161b22;border:1px solid #30363d;border-radius:16px;width:90%;max-width:480px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #30363d;">
-            <h2 style="margin:0;font-size:16px;color:#c9d1d9;font-family:Inter,sans-serif;">👑 Brukeradministrasjon</h2>
+            <h2 style="margin:0;font-size:16px;color:#c9d1d9;font-family:Inter,sans-serif;" id="admin-modal-title">👑 Brukeradministrasjon</h2>
             <button onclick="closeAdminPanel()" style="background:transparent;border:none;color:#8b949e;font-size:18px;cursor:pointer;line-height:1;">✕</button>
         </div>
-        <div style="padding:8px 12px;background:#0d1117;border-bottom:1px solid #30363d;font-size:11px;color:#8b949e;font-family:Inter,sans-serif;">
-            👁️ Leser = kan lese • ✏️ Redigerer = kan redigere • ⏳ Venter = ingen tilgang
+        <div style="display:flex;border-bottom:1px solid #30363d;background:#0d1117;">
+            <button onclick="adminTab('users')" id="admin-tab-users" style="padding:10px 18px;font-size:12px;border:none;border-bottom:2px solid #a371f7;background:transparent;color:#c9d1d9;cursor:pointer;font-family:Inter,sans-serif;">👑 Brukere</button>
+            <button onclick="adminTab('prompts')" id="admin-tab-prompts" style="padding:10px 18px;font-size:12px;border:none;border-bottom:2px solid transparent;background:transparent;color:#8b949e;cursor:pointer;font-family:Inter,sans-serif;">✏️ Promptmaler</button>
         </div>
-        <div id="admin-user-list" style="padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:4px;"></div>
-        <div style="padding:12px 16px;border-top:1px solid #30363d;display:flex;gap:8px;flex-wrap:wrap;">
-            <button onclick="loadAdminUsers()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">🔄 Oppdater liste</button>
-            <button onclick="cleanupOrphanedImages()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">🧹 Rydd opp ubrukte bilder</button>
+        <!-- BRUKERE -->
+        <div id="admin-section-users" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+            <div style="padding:8px 12px;background:#0d1117;border-bottom:1px solid #30363d;font-size:11px;color:#8b949e;font-family:Inter,sans-serif;">
+                👁️ Leser = kan lese • ✏️ Redigerer = kan redigere • ⏳ Venter = ingen tilgang
+            </div>
+            <div id="admin-user-list" style="padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:4px;"></div>
+            <div style="padding:12px 16px;border-top:1px solid #30363d;display:flex;gap:8px;flex-wrap:wrap;">
+                <button onclick="loadAdminUsers()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">🔄 Oppdater liste</button>
+                <button onclick="cleanupOrphanedImages()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">🧹 Rydd opp ubrukte bilder</button>
+            </div>
+        </div>
+        <!-- PROMPTMALER -->
+        <div id="admin-section-prompts" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+            <div style="padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:16px;">
+                <div style="font-size:11px;color:#8b949e;font-family:Inter,sans-serif;">Rediger promptmalene som brukes når du kopierer til Gemini. Lagres automatisk i Firebase.</div>
+                <div>
+                    <div style="font-size:11px;font-weight:700;color:#a371f7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-family:Inter,sans-serif;">📋 Artikkel-prompt</div>
+                    <textarea id="admin-prompt-article" style="width:100%;height:120px;font-family:monospace;font-size:11px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;padding:8px;resize:vertical;box-sizing:border-box;"></textarea>
+                </div>
+                <div>
+                    <div style="font-size:11px;font-weight:700;color:#58a6ff;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-family:Inter,sans-serif;">🔢 Formelforklaring-prompt</div>
+                    <textarea id="admin-prompt-formula" style="width:100%;height:120px;font-family:monospace;font-size:11px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;padding:8px;resize:vertical;box-sizing:border-box;"></textarea>
+                </div>
+                <div>
+                    <div style="font-size:11px;font-weight:700;color:#3fb950;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-family:Inter,sans-serif;">📖 Ordforklaring-prompt</div>
+                    <textarea id="admin-prompt-word" style="width:100%;height:120px;font-family:monospace;font-size:11px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;padding:8px;resize:vertical;box-sizing:border-box;"></textarea>
+                </div>
+            </div>
+            <div style="padding:12px 16px;border-top:1px solid #30363d;display:flex;gap:8px;">
+                <button onclick="savePromptTemplates()" style="background:#238636;border:1px solid #2ea043;color:#fff;border-radius:6px;padding:7px 18px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;flex:1;">💾 Lagre alle maler</button>
+                <button onclick="resetPromptTemplates()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">↺ Tilbakestill</button>
+            </div>
         </div>
     </div>
 </div>
@@ -3349,32 +3378,7 @@
 
     function copyWordTemplate(){
         var word = document.getElementById('wpp-word-label').textContent;
-        var template = [
-            'Skriv en ordforklaring for begrepet "' + word + '" på norsk bokmål.',
-            'Svar KUN med innholdet i en kodeblokk.',
-            '',
-            'EKSEMPEL PÅ KORREKT FORMAT (kopier strukturen nøyaktig):',
-            '',
-            '**Eksempelbegrep**',
-            '',
-            'To til tre setninger som forklarer hva begrepet er og hvordan det fungerer.',
-            '',
-            '* **Underbegrep 1:** En setning om dette underbegrepet.',
-            '* **Underbegrep 2:** En setning om dette underbegrepet.',
-            '',
-            '*Brukes i:* En setning om hvor begrepet brukes i praksis.',
-            '',
-            '---',
-            '',
-            'VIKTIG — følg disse reglene:',
-            '- Tittelen (**' + word + '**) skal stå på EN EGEN LINJE med TOM LINJE etter',
-            '- Forklaringsteksten skal stå på EN EGEN LINJE med TOM LINJE etter',
-            '- Punktlisten kommer etter forklaringen, med TOM LINJE mellom hvert punkt',
-            '- *Brukes i:* skal stå på HELT EGEN LINJE etter punktlisten',
-            '- IKKE skriv ordet i starten av forklaringsteksten',
-            '- Alle symboler i $...$: **$T$:** ikke **T:**',
-            '- Maks 3 punkter'
-        ].join('\n');
+        var template = promptTemplates.word.replace(/\{ORD\}/g, word);
         navigator.clipboard.writeText(template).then(function(){
             var btn = document.getElementById('wpp-copy-btn');
             btn.textContent = '\u2705 Kopiert!';
@@ -3503,36 +3507,7 @@
     function copyFormulaLatex(){
         if(!currentFormulaRawLatex){ showToast('Ingen formel valgt.'); return; }
         var latexFormatted = currentFormulaIsDisplay ? ('$$' + currentFormulaRawLatex + '$$') : ('$' + currentFormulaRawLatex + '$');
-        var text = [
-            'Forklar dette matematiske/fysiske symbolet eller denne formelen i Markdown,',
-            'tilpasset en norsk vitenskapswiki for videregående-elever.',
-            '',
-            'FØLG DENNE STRUKTUREN NØYAKTIG:',
-            '1. Start med ÉN kort setning (maks 3) om hva symbolet/formelen representerer generelt.',
-            '2. Legg inn en TOM LINJE.',
-            '3. Bruk en punktliste med * for detaljer/betydninger. Maks 4-5 punkter.',
-            '4. Ingen tittel, ingen skillelinje, ingen kilder, ingen oppsummering, ingen sitat.',
-            '',
-            'FOR HVERT PUNKT I LISTEN:',
-            '- Format: **Begrep:** forklaring',
-            '- Lengde: 1-3 enkle setninger',
-            '- Du kan vise ÉN kort formel per punkt hvis relevant, men ALDRI en full utledning',
-            '- Skriv symbolet KUN i dollartegn: $s$, ikke s',
-            '- Skriv symbolet ÉN gang per setning',
-            '',
-            'SPRÅK:',
-            '- Norsk bokmål, enkelt og konkret – for en videregående-elev',
-            '- Unngå avanserte fagord – bruk vanlige ord',
-            '- Forklar fagbegreper første gang de introduseres',
-            '',
-            'FORMATREGLER FOR MATEMATIKK:',
-            '- Inline: $F = ma$',
-            '- Kursiver fremmedord: *frekvens*',
-            '',
-            'Fag: matematikk/fysikk, videregående nivå',
-            '',
-            'Symbol/formel: ' + latexFormatted
-        ].join('\n');
+        var text = promptTemplates.formula.replace(/\{FORMEL\}/g, latexFormatted);
         var doFallbackCopy = function(){
             var ta = document.createElement('textarea');
             ta.value = text;
@@ -3815,62 +3790,18 @@
     function copyArticlePrompt(){
         var file = currentPath[currentPath.length-1];
         var title = (file && file.name) ? file.name : '{SKRIV TEMA HER}';
-        var template = [
-            'Skriv artikkelen i Markdown tilpasset en norsk vitenskapswiki. Følg denne strukturen og dette formatet nøyaktig:',
-            '',
-            'STRUKTUR:',
-            '- Start med: # Tittel',
-            '- Legg til --- som skillelinje under tittelen',
-            '- Skriv en kort introduksjon (2-4 setninger) uten overskrift',
-            '- Del resten inn i nummererte seksjoner: ### 1. Navn, ### 2. Navn osv.',
-            '- Tilpass antall seksjoner til temaets kompleksitet',
-            '- Avslutt med ---, deretter ### Oppsummering, gjerne et sitat, og til slutt ### Kilder',
-            '',
-            'FORMATREGLER:',
-            '- Punktlister med *, med fet tekst for begreper etterfulgt av kolon og forklaring',
-            '- Matematiske formler inline: $F = ma$',
-            '- Viktige formler på egen linje: $$F = G \frac{m_1 m_2}{r^2}$$',
-            '- Kursiver boktitler og fremmedord: *Principia*',
-            '- Oppsummeringen er nummerert liste (1. 2. 3.) med fet kategori etterfulgt av forklaring',
-            '- Avslutt gjerne med sitat i blockquote: > *"Sitat"* – Person',
-            '',
-            'KILDER:',
-            '- Siste seksjon heter ### Kilder',
-            '- Nummererte Markdown-lenker:',
-            '  1. [Kildenavn - Beskrivelse](https://url.com)',
-            '  2. [Kildenavn - Beskrivelse](https://url.com)',
-            '- Kun pålitelige kilder: Wikipedia, SNL.no, akademiske institusjoner, fagbøker',
-            '',
-            'SPRÅK OG TONE:',
-            '- Norsk bokmål',
-            '- Encyklopedisk og saklig, men tilgjengelig',
-            '- Forklar fagbegreper rett etter de introduseres',
-            '',
-            'SKRIVESTIL:',
-            '- Hvert avsnitt skal være kort — maks 2-3 setninger',
-            '- Bruk punktlister fremfor lange forklaringer i løpende tekst',
-            '- Introduser ett begrep om gangen, forklar det kort, gå videre',
-            '- Unngå lange sammenhengende avsnitt — del heller opp med punkter eller ny seksjon',
-            '- Tenk Wikipedia for ungdom, ikke lærebok',
-            '',
-            'Tema: ' + title,
-            '',
-            'Svar kun med Markdown-innholdet i en kodeblokk.'
-        ].join('\n');
+        var template = promptTemplates.article.replace(/\{TITTEL\}/g, title);
         var doFallback = function(){
             var ta = document.createElement('textarea');
             ta.value = template;
             ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
-            document.body.appendChild(ta);
-            ta.focus(); ta.select();
+            document.body.appendChild(ta); ta.focus(); ta.select();
             try{ document.execCommand('copy'); }catch(e){}
             document.body.removeChild(ta);
-            showToast('📋 Prompt kopiert!','success');
+            showToast('\uD83D\uDCCB Prompt kopiert!','success');
         };
         if(navigator.clipboard && window.isSecureContext){
-            navigator.clipboard.writeText(template).then(function(){
-                showToast('📋 Prompt kopiert!','success');
-            }).catch(doFallback);
+            navigator.clipboard.writeText(template).then(function(){ showToast('\uD83D\uDCCB Prompt kopiert!','success'); }).catch(doFallback);
         } else { doFallback(); }
     }
 
@@ -5208,6 +5139,144 @@
         }
     }
 
+    // ── PROMPTMALER ─────────────────────────────────────────────────
+    var promptTemplates = { article: '', formula: '', word: '' };
+
+    var DEFAULT_ARTICLE = [
+        'Skriv artikkelen i Markdown tilpasset en norsk vitenskapswiki. Følg denne strukturen og dette formatet nøyaktig:',
+        '',
+        'STRUKTUR:',
+        '- Start med: # Tittel',
+        '- Legg til --- som skillelinje under tittelen',
+        '- Skriv en kort introduksjon (2-4 setninger) uten overskrift',
+        '- Del resten inn i nummererte seksjoner: ### 1. Navn, ### 2. Navn osv.',
+        '- Tilpass antall seksjoner til temaets kompleksitet',
+        '- Avslutt med ---, deretter ### Oppsummering, gjerne et sitat, og til slutt ### Kilder',
+        '',
+        'FORMATREGLER:',
+        '- Punktlister med *, med fet tekst for begreper etterfulgt av kolon og forklaring',
+        '- Matematiske formler inline: $F = ma$',
+        '- Viktige formler på egen linje: $$F = G \frac{m_1 m_2}{r^2}$$',
+        '- Kursiver boktitler og fremmedord: *Principia*',
+        '- Oppsummeringen er nummerert liste (1. 2. 3.) med fet kategori etterfulgt av forklaring',
+        '- Avslutt gjerne med sitat i blockquote: > *"Sitat"* – Person',
+        '',
+        'KILDER:',
+        '- Siste seksjon heter ### Kilder',
+        '- Nummererte Markdown-lenker:',
+        '  1. [Kildenavn - Beskrivelse](https://url.com)',
+        '- Kun pålitelige kilder: Wikipedia, SNL.no, akademiske institusjoner, fagbøker',
+        '',
+        'SPRÅK OG TONE:',
+        '- Norsk bokmål, encyklopedisk og saklig, men tilgjengelig',
+        '- Forklar fagbegreper rett etter de introduseres',
+        '',
+        'SKRIVESTIL:',
+        '- Hvert avsnitt maks 2-3 setninger',
+        '- Bruk punktlister fremfor lange avsnitt',
+        '- Tenk Wikipedia for ungdom, ikke lærebok',
+        '',
+        'Svar kun med Markdown-innholdet i en kodeblokk.',
+        '',
+        'Tema: {TITTEL}'
+    ].join('\n');
+
+    var DEFAULT_FORMULA = [
+        'Forklar dette matematiske/fysiske symbolet eller denne formelen i Markdown, tilpasset en norsk vitenskapswiki for videregående-elever.',
+        '',
+        'FØLG DENNE STRUKTUREN NØYAKTIG:',
+        '1. Start med ÉN kort setning (maks 3) om hva symbolet/formelen representerer generelt.',
+        '2. Legg inn en TOM LINJE.',
+        '3. Bruk en punktliste med * for detaljer/betydninger. Maks 4-5 punkter.',
+        '4. Ingen tittel, ingen skillelinje, ingen kilder, ingen oppsummering, ingen sitat.',
+        '',
+        'FOR HVERT PUNKT I LISTEN:',
+        '- Format: **Begrep:** forklaring',
+        '- Lengde: 1-3 enkle setninger',
+        '- Skriv symbolet KUN i dollartegn: $s$, ikke s',
+        '',
+        'SPRÅK: Norsk bokmål, enkelt og konkret for videregående-elev',
+        '',
+        'Svar kun med Markdown i en kodeblokk.',
+        '',
+        'Symbol/formel: {FORMEL}'
+    ].join('\n');
+
+    var DEFAULT_WORD = [
+        'Skriv en ordforklaring for "{ORD}" på norsk bokmål i Markdown.',
+        'Svar KUN med innholdet i en kodeblokk.',
+        '',
+        'KORREKT FORMAT (kopier strukturen NØYAKTIG med tomme linjer):',
+        '',
+        '**{ORD}**',
+        '',
+        'Her kommer 2-3 setninger som forklarer hva {ORD} er.',
+        '',
+        '* **Underbegrep 1:** En setning.',
+        '',
+        '* **Underbegrep 2:** En setning.',
+        '',
+        '*Brukes i:* En setning om hvor begrepet brukes.',
+        '',
+        '---',
+        '',
+        'REGLER:',
+        '- TOM LINJE mellom hvert element',
+        '- IKKE skriv ordet i starten av forklaringsteksten',
+        '- Maks 3 punkter',
+        '- Symboler alltid i $...$'
+    ].join('\n');
+
+    function loadPromptTemplates(cb){
+        firebase.database().ref('promptTemplates').once('value').then(function(snap){
+            var val = snap.val() || {};
+            promptTemplates.article = val.article || DEFAULT_ARTICLE;
+            promptTemplates.formula = val.formula || DEFAULT_FORMULA;
+            promptTemplates.word    = val.word    || DEFAULT_WORD;
+            if(cb) cb();
+        }).catch(function(){
+            promptTemplates.article = DEFAULT_ARTICLE;
+            promptTemplates.formula = DEFAULT_FORMULA;
+            promptTemplates.word    = DEFAULT_WORD;
+            if(cb) cb();
+        });
+    }
+
+    function savePromptTemplates(){
+        promptTemplates.article = document.getElementById('admin-prompt-article').value;
+        promptTemplates.formula = document.getElementById('admin-prompt-formula').value;
+        promptTemplates.word    = document.getElementById('admin-prompt-word').value;
+        firebase.database().ref('promptTemplates').set(promptTemplates).then(function(){
+            showToast('✅ Promptmaler lagret!', 'success');
+        });
+    }
+
+    function resetPromptTemplates(){
+        if(!confirm('Tilbakestill alle maler til standard?')) return;
+        promptTemplates.article = DEFAULT_ARTICLE;
+        promptTemplates.formula = DEFAULT_FORMULA;
+        promptTemplates.word    = DEFAULT_WORD;
+        firebase.database().ref('promptTemplates').remove();
+        document.getElementById('admin-prompt-article').value = DEFAULT_ARTICLE;
+        document.getElementById('admin-prompt-formula').value = DEFAULT_FORMULA;
+        document.getElementById('admin-prompt-word').value    = DEFAULT_WORD;
+        showToast('↺ Maler tilbakestilt', 'success');
+    }
+
+    function adminTab(tab){
+        document.getElementById('admin-section-users').style.display   = tab==='users'   ? 'flex' : 'none';
+        document.getElementById('admin-section-prompts').style.display = tab==='prompts' ? 'flex' : 'none';
+        document.getElementById('admin-tab-users').style.borderBottomColor   = tab==='users'   ? '#a371f7' : 'transparent';
+        document.getElementById('admin-tab-users').style.color               = tab==='users'   ? '#c9d1d9' : '#8b949e';
+        document.getElementById('admin-tab-prompts').style.borderBottomColor = tab==='prompts' ? '#a371f7' : 'transparent';
+        document.getElementById('admin-tab-prompts').style.color             = tab==='prompts' ? '#c9d1d9' : '#8b949e';
+        if(tab==='prompts'){
+            document.getElementById('admin-prompt-article').value = promptTemplates.article;
+            document.getElementById('admin-prompt-formula').value = promptTemplates.formula;
+            document.getElementById('admin-prompt-word').value    = promptTemplates.word;
+        }
+    }
+
     function openAdminPanel(){
         if(currentRole !== 'admin') return;
         document.getElementById('admin-modal').style.display = 'flex';
@@ -5311,7 +5380,7 @@
             var leftBtns = document.getElementById('header-left-btns');
             if(leftBtns) leftBtns.style.display = 'none';
         }
-        initializeDatabase(); loadFormulaDict(); loadWordDict(); loadExcludedFormulas(); updateClock(); setInterval(updateClock,1000); render();
+        initializeDatabase(); loadFormulaDict(); loadWordDict(); loadExcludedFormulas(); loadPromptTemplates(); updateClock(); setInterval(updateClock,1000); render();
         checkLock();
         initAuth();
         window.addEventListener('resize', function(){
