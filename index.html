@@ -3409,13 +3409,11 @@
 
     function makeWordsClickable(container){
         var isEditor = currentRole==='editor'||currentRole==='admin';
-        // Gå gjennom alle tekstnoder og pakk enkeltord inn i spans
         var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
             acceptNode: function(node){
                 var p = node.parentElement;
                 if(!p) return NodeFilter.FILTER_REJECT;
                 var tag = p.tagName;
-                // Hopp over kode, formler, lenker, eksisterende word-spans
                 if(tag==='CODE'||tag==='PRE'||tag==='SCRIPT'||tag==='STYLE') return NodeFilter.FILTER_REJECT;
                 if(p.classList.contains('katex')||p.classList.contains('katex-display')) return NodeFilter.FILTER_REJECT;
                 if(p.classList.contains('word-clickable')) return NodeFilter.FILTER_REJECT;
@@ -3425,32 +3423,55 @@
         }, false);
         var nodes=[];
         while(walker.nextNode()) nodes.push(walker.currentNode);
+
         nodes.forEach(function(node){
             var text = node.textContent;
             if(!text.trim()) return;
             var frag = document.createDocumentFragment();
-            var regex = /([a-zA-ZæøåÆØÅ]{3,})/g;
-            var last=0, m;
-            while((m=regex.exec(text))!==null){
-                if(m.index>last) frag.appendChild(document.createTextNode(text.slice(last,m.index)));
-                var word=m[1];
-                var key=wordKey(word);
-                var hasDef = !!wordDict[key];
-                if(hasDef||isEditor){
-                    var span=document.createElement('span');
-                    span.className='word-clickable'+(hasDef?' has-word-def':'');
-                    span.textContent=word;
-                    span.onclick=function(e){
-                        e.stopPropagation();
-                        openWordPopup(this.textContent, this);
-                    };
-                    frag.appendChild(span);
-                } else {
-                    frag.appendChild(document.createTextNode(word));
+            var i = 0;
+
+            while(i < text.length){
+                // Prøv å matche flerord-uttrykk fra ordboken (maks 4 ord)
+                var matched = false;
+                if(/[a-zA-ZæøåÆØÅ]/.test(text[i])){
+                    // Finn slutten av dette og neste ord(er)
+                    for(var wc = 4; wc >= 1; wc--){
+                        var re = new RegExp('^([a-zA-ZæøåÆØÅ]+(?:[\s\-][a-zA-ZæøåÆØÅ]+){' + (wc-1) + '})');
+                        var sub = text.slice(i);
+                        var wm = re.exec(sub);
+                        if(wm){
+                            var phrase = wm[1];
+                            var key = wordKey(phrase);
+                            var hasDef = !!wordDict[key];
+                            if(hasDef || (wc === 1 && (isEditor || hasDef))){
+                                if(wc > 1 && !hasDef) continue; // Flerord uten def, prøv kortere
+                                if(wc === 1 && !hasDef && !isEditor){
+                                    // Enkeltord uten def og ikke editor — legg til som tekst
+                                    frag.appendChild(document.createTextNode(phrase));
+                                    i += phrase.length;
+                                    matched = true;
+                                    break;
+                                }
+                                var span = document.createElement('span');
+                                span.className = 'word-clickable' + (hasDef ? ' has-word-def' : '');
+                                span.textContent = phrase;
+                                span.onclick = (function(p){ return function(e){
+                                    e.stopPropagation();
+                                    openWordPopup(p, this);
+                                }; })(phrase);
+                                frag.appendChild(span);
+                                i += phrase.length;
+                                matched = true;
+                                break;
+                            }
+                        }
+                    }
                 }
-                last=m.index+word.length;
+                if(!matched){
+                    frag.appendChild(document.createTextNode(text[i]));
+                    i++;
+                }
             }
-            if(last<text.length) frag.appendChild(document.createTextNode(text.slice(last)));
             node.parentNode.replaceChild(frag, node);
         });
     }
