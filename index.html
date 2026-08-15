@@ -3369,6 +3369,25 @@
         } else {
             bodyEl.innerHTML = '<div class="fpp-empty">Ingen forklaring lagt til ennå.</div>';
         }
+
+        // Sjekk om det finnes en artikkel med (nesten) samme navn
+        var wLower = word.trim().toLowerCase();
+        var matchFile = getAllFiles(db).find(function(f){ return (f.name||'').trim().toLowerCase() === wLower; });
+        var moreBtn = document.getElementById('wpp-more-link');
+        if(moreBtn) moreBtn.remove();
+        if(matchFile){
+            var btn = document.createElement('button');
+            btn.id = 'wpp-more-link';
+            btn.className = 'btn btn-outline';
+            btn.style.cssText = 'width:100%;justify-content:center;margin-top:16px;';
+            btn.textContent = '📖 Mer om ' + matchFile.name;
+            btn.onclick = function(){
+                closeWordPopup();
+                navigateToId(matchFile.id);
+            };
+            bodyEl.parentElement.insertBefore(btn, bodyEl.nextSibling);
+        }
+
         var editor = document.getElementById('wpp-editor');
         var ta = document.getElementById('wpp-textarea');
         if(currentRole==='editor'||currentRole==='admin'){
