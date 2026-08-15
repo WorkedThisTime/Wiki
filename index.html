@@ -3342,6 +3342,27 @@
         }).catch(function(){ wordDict={}; if(cb) cb(); });
     }
 
+    function refreshWordLinks(){
+        // Fjern alle eksisterende word-clickable spans og bygg dem på nytt,
+        // slik at nylig lagrede flerords-forklaringer grupperes riktig med en gang
+        ['text-display','qv-body','book-page-body'].forEach(function(id){
+            var el = document.getElementById(id);
+            if(!el) return;
+            el.querySelectorAll('.word-clickable').forEach(function(span){
+                var textNode = document.createTextNode(span.textContent);
+                span.parentNode.replaceChild(textNode, span);
+            });
+            el.normalize();
+            makeWordsClickable(el);
+        });
+        // Formel-popupens innhold kan også ha ord-lenker
+        var fppBody = document.getElementById('fpp-body');
+        if(fppBody) fppBody.querySelectorAll('.word-clickable').forEach(function(span){
+            var textNode = document.createTextNode(span.textContent);
+            span.parentNode.replaceChild(textNode, span);
+        });
+    }
+
     function saveWordExplanation(){
         if(!currentWordKey) return;
         var text = document.getElementById('wpp-textarea').value.trim();
@@ -3354,10 +3375,7 @@
             bd.innerHTML = '<div class="fpp-body" style="font-size:15px;line-height:1.6;color:var(--text-main);">'+rendered2.html+'</div>';
             if(katexReady){ try{ renderMathInElement(bd,KATEX_CONFIG); }catch(e){} }
             if(window.Prism) Prism.highlightAllUnder(bd);
-            // Marker ord som har forklaring
-            document.querySelectorAll('.word-clickable').forEach(function(el){
-                if(wordKey(el.textContent)===currentWordKey) el.classList.add('has-word-def');
-            });
+            refreshWordLinks();
         });
     }
 
@@ -3368,9 +3386,7 @@
             showToast('Ordforklaring slettet.');
             document.getElementById('wpp-body').innerHTML = '<div class="fpp-empty">Ingen forklaring lagt til ennå.</div>';
             document.getElementById('wpp-textarea').value = '';
-            document.querySelectorAll('.word-clickable').forEach(function(el){
-                if(wordKey(el.textContent)===currentWordKey) el.classList.remove('has-word-def');
-            });
+            refreshWordLinks();
         });
     }
 
@@ -3532,6 +3548,28 @@
         });
     }
 
+    function findBestPhraseAt(span){
+        // Sjekk om ordet er del av en lagret flerords-forklaring (maks 4 ord),
+        // ved å prøve alle sammenhengende vinduer som inkluderer dette ordet.
+        var allSpans = Array.prototype.slice.call(document.querySelectorAll('.word-clickable[data-group-id]'));
+        var idx = allSpans.indexOf(span);
+        if(idx === -1) return null;
+        for(var winLen = 4; winLen >= 2; winLen--){
+            for(var start = Math.max(0, idx-winLen+1); start <= idx; start++){
+                var end = start + winLen - 1;
+                if(end >= allSpans.length || end < idx) continue;
+                // Sjekk at spennene faktisk er nabo-spenn fra samme tekstblokk (sekvensielle groupId)
+                var group = allSpans.slice(start, end+1);
+                var phrase = group.map(function(s){ return s.dataset.word; }).join(' ');
+                var key = wordKey(phrase);
+                if(wordDict[key]){
+                    return { phrase: phrase, spans: group };
+                }
+            }
+        }
+        return null;
+    }
+
     function makeWordClickHandler(span, word, isEditor){
         return function(e){
             e.stopPropagation();
@@ -3556,8 +3594,16 @@
                 }
             }
 
-            // Vanlig klikk (eller for langt fra forrige) — start nytt utvalg her
+            // Vanlig klikk: sjekk først om ordet er del av en lagret nabo-frase
             document.querySelectorAll('.word-clickable.word-selected').forEach(function(s){ s.classList.remove('word-selected'); });
+            var phraseMatch = findBestPhraseAt(span);
+            if(phraseMatch){
+                phraseMatch.spans.forEach(function(s){ s.classList.add('word-selected'); });
+                _lastClickedWordSpan = span;
+                openWordPopup(phraseMatch.phrase, span);
+                return;
+            }
+
             if(hasDef || isEditor){
                 span.classList.add('word-selected');
                 _lastClickedWordSpan = span;
