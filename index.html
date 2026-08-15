@@ -3434,6 +3434,13 @@
 
     function makeWordsClickable(container){
         var isEditor = currentRole==='editor'||currentRole==='admin';
+        // Bygg sett av flerords-artikkeltitler (f.eks. "Isaac Newton") slik at de
+        // gjenkjennes som én enhet selv om ordforklaringen ikke er skrevet ennå
+        var articlePhrases = {};
+        getAllFiles(db).forEach(function(f){
+            var n = (f.name||'').trim();
+            if(n.indexOf(' ') !== -1) articlePhrases[wordKey(n)] = true;
+        });
         var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
             acceptNode: function(node){
                 var p = node.parentElement;
@@ -3459,7 +3466,7 @@
             while(i < text.length){
                 var matched = false;
                 if(/[a-zA-ZæøåÆØÅ]/.test(text[i])){
-                    // Prøv flerord-uttrykk fra ordboken først (maks 4 ord), deretter enkeltord
+                    // Prøv flerord-uttrykk fra ordboken/artikkeltitler først (maks 4 ord), deretter enkeltord
                     for(var wc = 4; wc >= 1; wc--){
                         var re = new RegExp('^([a-zA-ZæøåÆØÅ]+(?:[\s\-][a-zA-ZæøåÆØÅ]+){' + (wc-1) + '})');
                         var wm = re.exec(text.slice(i));
@@ -3467,7 +3474,8 @@
                         var phrase = wm[1];
                         var key = wordKey(phrase);
                         var hasDef = !!wordDict[key];
-                        if(wc > 1 && !hasDef) continue; // Bare bruk flerord om det faktisk har def
+                        var isArticleTitle = !!articlePhrases[key];
+                        if(wc > 1 && !hasDef && !isArticleTitle) continue; // Bare bruk flerord om det har def eller matcher en artikkeltittel
 
                         if(wc === 1){
                             // Del enkeltordet opp i eget span slik at shift-klikk kan bygge videre
@@ -3480,9 +3488,9 @@
                             span.addEventListener('mousedown', function(e){ if(e.shiftKey) e.preventDefault(); });
                             frag.appendChild(span);
                         } else {
-                            // Ferdig uttrykk med definisjon — ett samlet span
+                            // Ferdig uttrykk (definert i ordboken eller matcher en artikkeltittel) — ett samlet span
                             var span2 = document.createElement('span');
-                            span2.className = 'word-clickable has-word-def';
+                            span2.className = 'word-clickable' + (hasDef ? ' has-word-def' : '');
                             span2.textContent = phrase;
                             span2.onclick = (function(p){ return function(e){
                                 e.stopPropagation();
