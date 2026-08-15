@@ -178,6 +178,7 @@
         .word-clickable { cursor:default; }
         .word-clickable.has-word-def { cursor:pointer; border-bottom:1px dotted rgba(91,143,255,0.6); color:inherit; }
         .word-clickable.has-word-def:hover { background:rgba(91,143,255,0.1); border-radius:3px; }
+        .word-clickable.word-selected { background:rgba(91,143,255,0.25); border-radius:3px; }
         body.is-editor .word-clickable:hover { cursor:pointer; background:rgba(255,255,255,0.05); border-radius:3px; border-bottom:1px dotted rgba(255,255,255,0.2); }
         .katex-clickable { cursor:pointer; border-radius:5px; transition:background 0.15s,outline 0.15s; }
         .katex-clickable:hover { background:rgba(91,143,255,0.13); outline:2px solid rgba(91,143,255,0.35); }
@@ -3407,6 +3408,8 @@
         }
     });
 
+    var _lastClickedWordSpan = null; // For shift+klikk utvidelse
+
     function makeWordsClickable(container){
         var isEditor = currentRole==='editor'||currentRole==='admin';
         var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
@@ -3429,42 +3432,44 @@
             if(!text.trim()) return;
             var frag = document.createDocumentFragment();
             var i = 0;
+            var groupId = 0;
 
             while(i < text.length){
-                // Prøv å matche flerord-uttrykk fra ordboken (maks 4 ord)
                 var matched = false;
                 if(/[a-zA-ZæøåÆØÅ]/.test(text[i])){
-                    // Finn slutten av dette og neste ord(er)
+                    // Prøv flerord-uttrykk fra ordboken først (maks 4 ord), deretter enkeltord
                     for(var wc = 4; wc >= 1; wc--){
                         var re = new RegExp('^([a-zA-ZæøåÆØÅ]+(?:[\s\-][a-zA-ZæøåÆØÅ]+){' + (wc-1) + '})');
-                        var sub = text.slice(i);
-                        var wm = re.exec(sub);
-                        if(wm){
-                            var phrase = wm[1];
-                            var key = wordKey(phrase);
-                            var hasDef = !!wordDict[key];
-                            if(hasDef || (wc === 1 && (isEditor || hasDef))){
-                                if(wc > 1 && !hasDef) continue; // Flerord uten def, prøv kortere
-                                if(wc === 1 && !hasDef && !isEditor){
-                                    // Enkeltord uten def og ikke editor — legg til som tekst
-                                    frag.appendChild(document.createTextNode(phrase));
-                                    i += phrase.length;
-                                    matched = true;
-                                    break;
-                                }
-                                var span = document.createElement('span');
-                                span.className = 'word-clickable' + (hasDef ? ' has-word-def' : '');
-                                span.textContent = phrase;
-                                span.onclick = (function(p){ return function(e){
-                                    e.stopPropagation();
-                                    openWordPopup(p, this);
-                                }; })(phrase);
-                                frag.appendChild(span);
-                                i += phrase.length;
-                                matched = true;
-                                break;
-                            }
+                        var wm = re.exec(text.slice(i));
+                        if(!wm) continue;
+                        var phrase = wm[1];
+                        var key = wordKey(phrase);
+                        var hasDef = !!wordDict[key];
+                        if(wc > 1 && !hasDef) continue; // Bare bruk flerord om det faktisk har def
+
+                        if(wc === 1){
+                            // Del enkeltordet opp i eget span slik at shift-klikk kan bygge videre
+                            var span = document.createElement('span');
+                            span.className = 'word-clickable' + (hasDef ? ' has-word-def' : '');
+                            span.textContent = phrase;
+                            span.dataset.word = phrase;
+                            span.dataset.groupId = 'g' + (groupId++);
+                            span.onclick = makeWordClickHandler(span, phrase, isEditor);
+                            frag.appendChild(span);
+                        } else {
+                            // Ferdig uttrykk med definisjon — ett samlet span
+                            var span2 = document.createElement('span');
+                            span2.className = 'word-clickable has-word-def';
+                            span2.textContent = phrase;
+                            span2.onclick = (function(p){ return function(e){
+                                e.stopPropagation();
+                                openWordPopup(p, this);
+                            }; })(phrase);
+                            frag.appendChild(span2);
                         }
+                        i += phrase.length;
+                        matched = true;
+                        break;
                     }
                 }
                 if(!matched){
@@ -3476,25 +3481,40 @@
         });
     }
 
-    // ── SHIFT + DRA FOR Å VELGE FLERE ORD ─────────────────────────────
-    document.addEventListener('mouseup', function(e){
-        if(!e.shiftKey) return;
-        var sel = window.getSelection();
-        if(!sel || sel.isCollapsed) return;
-        var text = sel.toString().trim();
-        if(!text || text.length < 2 || text.length > 80) return;
-        // Sjekk at valget skjedde inni et lesbart dokumentområde
-        var anchor = sel.anchorNode;
-        var container = anchor && anchor.nodeType===3 ? anchor.parentElement : anchor;
-        var readArea = container && container.closest('#text-display, #qv-body, #book-page-body, .fpp-body, #wpp-body');
-        if(!readArea) return;
-        var isEditor = currentRole==='editor'||currentRole==='admin';
-        var key = wordKey(text.replace(/\s+/g,' '));
-        if(!wordDict[key] && !isEditor) return; // Leser kan bare åpne uttrykk som allerede har forklaring
-        e.preventDefault();
-        sel.removeAllRanges();
-        openWordPopup(text.replace(/\s+/g,' '), readArea);
-    });
+    function makeWordClickHandler(span, word, isEditor){
+        return function(e){
+            e.stopPropagation();
+            var hasDef = span.classList.contains('has-word-def');
+
+            if(e.shiftKey && _lastClickedWordSpan && _lastClickedWordSpan !== span){
+                // Bygg sammenhengende ordkjede mellom forrige og dette (maks 4 ord)
+                var allSpans = Array.prototype.slice.call(document.querySelectorAll('.word-clickable[data-group-id]'));
+                var i1 = allSpans.indexOf(_lastClickedWordSpan);
+                var i2 = allSpans.indexOf(span);
+                if(i1 !== -1 && i2 !== -1){
+                    var lo = Math.min(i1,i2), hi = Math.max(i1,i2);
+                    if(hi - lo <= 3){ // Maks 4 ord
+                        var phrase = allSpans.slice(lo, hi+1).map(function(s){ return s.dataset.word; }).join(' ');
+                        allSpans.forEach(function(s,idx){ s.classList.toggle('word-selected', idx>=lo && idx<=hi); });
+                        if(wordDict[wordKey(phrase)] || isEditor){
+                            openWordPopup(phrase, span);
+                        }
+                        _lastClickedWordSpan = null;
+                        return;
+                    }
+                }
+            }
+
+            // Vanlig klikk (eller for langt fra forrige) — start nytt utvalg her
+            document.querySelectorAll('.word-clickable.word-selected').forEach(function(s){ s.classList.remove('word-selected'); });
+            if(hasDef || isEditor){
+                span.classList.add('word-selected');
+                _lastClickedWordSpan = span;
+                if(hasDef) openWordPopup(word, span);
+                else if(isEditor) openWordPopup(word, span);
+            }
+        };
+    }
 
     function openFormulaPopup(latex, sourceEl) {
         var popup = document.getElementById('formula-popup');
