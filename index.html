@@ -178,6 +178,8 @@
         .word-clickable { cursor:default; user-select:none; -webkit-user-select:none; }
         .word-clickable.has-word-def { cursor:pointer; border-bottom:1px dotted rgba(91,143,255,0.6); color:inherit; }
         .word-clickable.has-word-def:hover { background:rgba(91,143,255,0.1); border-radius:3px; }
+        .word-clickable.has-article-link { cursor:pointer; border-bottom:1px dotted rgba(63,185,80,0.55); color:inherit; }
+        .word-clickable.has-article-link:hover { background:rgba(63,185,80,0.1); border-radius:3px; }
         .word-clickable.word-selected { background:rgba(91,143,255,0.25); border-radius:3px; }
         body.is-editor .word-clickable:hover { cursor:pointer; background:rgba(255,255,255,0.05); border-radius:3px; border-bottom:1px dotted rgba(255,255,255,0.2); }
         .katex-clickable { cursor:pointer; border-radius:5px; transition:background 0.15s,outline 0.15s; }
@@ -3490,7 +3492,7 @@
                         } else {
                             // Ferdig uttrykk (definert i ordboken eller matcher en artikkeltittel) — ett samlet span
                             var span2 = document.createElement('span');
-                            span2.className = 'word-clickable' + (hasDef ? ' has-word-def' : '');
+                            span2.className = 'word-clickable' + (hasDef ? ' has-word-def' : (isArticleTitle ? ' has-article-link' : ''));
                             span2.textContent = phrase;
                             span2.onclick = (function(p){ return function(e){
                                 e.stopPropagation();
