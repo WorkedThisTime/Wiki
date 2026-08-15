@@ -3476,6 +3476,26 @@
         });
     }
 
+    // ── SHIFT + DRA FOR Å VELGE FLERE ORD ─────────────────────────────
+    document.addEventListener('mouseup', function(e){
+        if(!e.shiftKey) return;
+        var sel = window.getSelection();
+        if(!sel || sel.isCollapsed) return;
+        var text = sel.toString().trim();
+        if(!text || text.length < 2 || text.length > 80) return;
+        // Sjekk at valget skjedde inni et lesbart dokumentområde
+        var anchor = sel.anchorNode;
+        var container = anchor && anchor.nodeType===3 ? anchor.parentElement : anchor;
+        var readArea = container && container.closest('#text-display, #qv-body, #book-page-body, .fpp-body, #wpp-body');
+        if(!readArea) return;
+        var isEditor = currentRole==='editor'||currentRole==='admin';
+        var key = wordKey(text.replace(/\s+/g,' '));
+        if(!wordDict[key] && !isEditor) return; // Leser kan bare åpne uttrykk som allerede har forklaring
+        e.preventDefault();
+        sel.removeAllRanges();
+        openWordPopup(text.replace(/\s+/g,' '), readArea);
+    });
+
     function openFormulaPopup(latex, sourceEl) {
         var popup = document.getElementById('formula-popup');
         var latexEl = document.getElementById('fpp-latex');
