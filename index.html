@@ -2483,6 +2483,9 @@
         for(var pi=0; pi<parts.length; pi++){
             if(/^<a\b/i.test(parts[pi])) continue; // Hopp over hele <a>-blokken, immun mot hurtigoppslag
             var segHtml = parts[pi];
+            // Plassholdere hindrer at et kortere sidenavn (f.eks. "Newton") wrapper på nytt
+            // inni tekst som allerede er pakket i en lenke for et lengre navn ("Isaac Newton")
+            var wlPH = {}, wlC = 0;
             allPages.forEach(function(page){
                 if(!page||page.id===currentFileId) return;
                 var kw=[page.name];
@@ -2490,9 +2493,16 @@
                 Array.from(new Set(kw)).forEach(function(word){
                     if(word.length<1) return;
                     segHtml=segHtml.replace(new RegExp('(\\$\\$[\\s\\S]*?\\$\\$|\\\\\\[[\\s\\S]*?\\\\\\]|\\$[^$]+?\\$|\\\\\\([\\s\\S]*?\\\\\\)|<[^>]+>)|\\b('+escapeRegExp(word)+')\\b','gi'),
-                        function(m,ign){return ign?ign:'<span class="wiki-link" onclick="openQuickView(\''+sanitizeHTML(page.id)+'\')">'+m+'</span>';});
+                        function(m,ign){
+                            if(ign) return ign;
+                            var key = 'WLPH_'+(wlC++)+'_END';
+                            wlPH[key] = '<span class="wiki-link" onclick="openQuickView(\''+sanitizeHTML(page.id)+'\')">'+m+'</span>';
+                            return key;
+                        });
                 });
             });
+            // Gjenopprett plassholdere til faktiske lenker
+            Object.keys(wlPH).forEach(function(k){ segHtml = segHtml.split(k).join(wlPH[k]); });
             parts[pi] = segHtml;
         }
         return parts.join('');
@@ -3451,6 +3461,7 @@
                 if(tag==='CODE'||tag==='PRE'||tag==='SCRIPT'||tag==='STYLE') return NodeFilter.FILTER_REJECT;
                 if(p.classList.contains('katex')||p.classList.contains('katex-display')) return NodeFilter.FILTER_REJECT;
                 if(p.classList.contains('word-clickable')) return NodeFilter.FILTER_REJECT;
+                if(p.classList.contains('wiki-link')) return NodeFilter.FILTER_REJECT;
                 if(tag==='A') return NodeFilter.FILTER_REJECT;
                 return NodeFilter.FILTER_ACCEPT;
             }
