@@ -2492,7 +2492,14 @@
                 if(page.aliases) kw.push.apply(kw,page.aliases.split(/[,/]/).map(function(s){return s.trim();}).filter(function(s){return s.length>0;}));
                 Array.from(new Set(kw)).forEach(function(word){
                     if(word.length<1) return;
-                    segHtml=segHtml.replace(new RegExp('(\\$\\$[\\s\\S]*?\\$\\$|\\\\\\[[\\s\\S]*?\\\\\\]|\\$[^$]+?\\$|\\\\\\([\\s\\S]*?\\\\\\)|<[^>]+>)|\\b('+escapeRegExp(word)+')\\b','gi'),
+                    // Ikke auto-lenk et enkeltstående, stort-forbokstav-ord (f.eks. "Newton")
+                    // hvis det står rett ved siden av et annet stort-forbokstav-ord (f.eks. "Isaac Newton")
+                    // — da er det trolig en del av et lengre navn som ikke har egen side.
+                    var isCapitalizedSingleWord = /^[A-ZÆØÅ][a-zæøåA-ZÆØÅ']*$/.test(word) && !/\s/.test(word);
+                    var guard = isCapitalizedSingleWord
+                        ? '(?<![A-ZÆØÅ][a-zæøåA-ZÆØÅ\']*\\s)\\b(' + escapeRegExp(word) + ')\\b(?!\\s[A-ZÆØÅ])'
+                        : '\\b(' + escapeRegExp(word) + ')\\b';
+                    segHtml=segHtml.replace(new RegExp('(\\$\\$[\\s\\S]*?\\$\\$|\\\\\\[[\\s\\S]*?\\\\\\]|\\$[^$]+?\\$|\\\\\\([\\s\\S]*?\\\\\\)|<[^>]+>)|'+guard,'gi'),
                         function(m,ign){
                             if(ign) return ign;
                             var key = 'WLPH_'+(wlC++)+'_END';
