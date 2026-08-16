@@ -3328,7 +3328,7 @@
     var wordDict = {};
     var currentWordKey = null;
 
-    function wordKey(w){ return w.trim().toLowerCase(); }
+    function wordKey(w){ return w.trim().toLowerCase().replace(/\s+/g,' '); }
 
     function encodeWordKey(k){ return k.replace(/[.#$\[\]]/g, function(c){ return '_x'+c.charCodeAt(0)+'_'; }); }
     function decodeWordKey(k){ return k.replace(/_x(\d+)_/g, function(m,c){ return String.fromCharCode(parseInt(c)); }); }
