@@ -3428,7 +3428,7 @@
 
         var editor = document.getElementById('wpp-editor');
         var ta = document.getElementById('wpp-textarea');
-        if(currentRole==='editor'||currentRole==='admin'){
+        if((currentRole==='editor'||currentRole==='admin') && !readModeActive){
             editor.style.display='block';
             ta.value = explanation||'';
         } else {
@@ -3508,7 +3508,7 @@
     }
 
     function makeWordsClickable(container){
-        var isEditor = currentRole==='editor'||currentRole==='admin';
+        var isEditor = (currentRole==='editor'||currentRole==='admin') && !readModeActive;
         // Bygg sett av flerords-artikkeltitler (f.eks. "Isaac Newton") slik at de
         // gjenkjennes som én enhet selv om ordforklaringen ikke er skrevet ennå
         var articlePhrases = {};
