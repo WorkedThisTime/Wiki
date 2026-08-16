@@ -3340,6 +3340,7 @@
             wordDict = {};
             Object.keys(val).forEach(function(k){ wordDict[decodeWordKey(k)] = val[k]; });
             wordDictReady = true;
+            refreshAllPhraseHighlighting();
             if(cb) cb();
         }).catch(function(){ wordDict={}; wordDictReady = true; if(cb) cb(); });
     }
@@ -3469,12 +3470,41 @@
 
     var _lastClickedWordSpan = null; // For shift+klikk utvidelse
 
+    function applyPhraseHighlighting(container){
+        // Går gjennom allerede bygde enkeltord-spenn og markerer flerords-fraser
+        // (2-4 ord) visuelt hvis de finnes i ordboken. Kjøres uavhengig av
+        // når ordboken faktisk ble ferdig lastet — retter opp streker selv om
+        // spennene ble bygget før wordDict var klar.
+        if(!container) return;
+        var spans = Array.prototype.slice.call(container.querySelectorAll('.word-clickable[data-group-id]'));
+        for(var i=0;i<spans.length;i++){
+            for(var winLen=4; winLen>=2; winLen--){
+                if(i+winLen>spans.length) continue;
+                var group = spans.slice(i, i+winLen);
+                var phrase = group.map(function(s){ return s.dataset.word; }).join(' ');
+                var key = wordKey(phrase);
+                if(wordDict[key]){
+                    group.forEach(function(s){ s.classList.add('has-word-def'); });
+                    i += winLen-1;
+                    break;
+                }
+            }
+        }
+    }
+
+    function refreshAllPhraseHighlighting(){
+        ['text-display','qv-body','book-page-body','wpp-body','fpp-body'].forEach(function(id){
+            applyPhraseHighlighting(document.getElementById(id));
+        });
+    }
+
     function ensureWordsClickable(container, attempt){
         if(!wordDictReady && (attempt||0) < 40){
             setTimeout(function(){ ensureWordsClickable(container, (attempt||0)+1); }, 100);
             return;
         }
         makeWordsClickable(container);
+        applyPhraseHighlighting(container);
     }
 
     function makeWordsClickable(container){
