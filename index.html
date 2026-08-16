@@ -2492,6 +2492,10 @@
                 if(page.aliases) kw.push.apply(kw,page.aliases.split(/[,/]/).map(function(s){return s.trim();}).filter(function(s){return s.length>0;}));
                 Array.from(new Set(kw)).forEach(function(word){
                     if(word.length<1) return;
+                    // Hvis ordet/uttrykket har en ordforklaring, la ordforklarings-systemet
+                    // håndtere klikket i stedet for å auto-lenke rett til artikkelen.
+                    // "Mer om..."-knappen i ordforklaringen tar deg videre til artikkelen.
+                    if(wordDict[wordKey(word)]) return;
                     // Ikke auto-lenk et enkeltstående, stort-forbokstav-ord (f.eks. "Newton")
                     // hvis det står rett ved siden av et annet stort-forbokstav-ord (f.eks. "Isaac Newton")
                     // — da er det trolig en del av et lengre navn som ikke har egen side.
@@ -3503,6 +3507,10 @@
         ['text-display','qv-body','book-page-body','wpp-body','fpp-body'].forEach(function(id){
             applyPhraseHighlighting(document.getElementById(id));
         });
+        // Bygg gjeldende dokument helt på nytt slik at wiki-lenker som skal vike
+        // for en ordforklaring (f.eks. "Isaac Newton") oppdateres riktig
+        var curFile = currentPath && currentPath[currentPath.length-1];
+        if(curFile && curFile.type === 'file') updateLivePreview(curFile);
     }
 
     function ensureWordsClickable(container, attempt){
