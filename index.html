@@ -2421,7 +2421,7 @@
         setTimeout(function(){
             if(katexReady){ try{ renderMathInElement(display,KATEX_CONFIG); }catch(e){} }
             makeFormulasClickable(display);
-            makeWordsClickable(display);
+            ensureWordsClickable(display);
             updateMissingFormulasBox(display);
             if(window.Prism) Prism.highlightAllUnder(display);
             buildTOC();
@@ -3333,13 +3333,15 @@
     function encodeWordKey(k){ return k.replace(/[.#$\[\]]/g, function(c){ return '_x'+c.charCodeAt(0)+'_'; }); }
     function decodeWordKey(k){ return k.replace(/_x(\d+)_/g, function(m,c){ return String.fromCharCode(parseInt(c)); }); }
 
+    var wordDictReady = false;
     function loadWordDict(cb){
         firebase.database().ref('wordDict').once('value').then(function(snap){
             var val = snap.val() || {};
             wordDict = {};
             Object.keys(val).forEach(function(k){ wordDict[decodeWordKey(k)] = val[k]; });
+            wordDictReady = true;
             if(cb) cb();
-        }).catch(function(){ wordDict={}; if(cb) cb(); });
+        }).catch(function(){ wordDict={}; wordDictReady = true; if(cb) cb(); });
     }
 
     function refreshWordLinks(){
@@ -3466,6 +3468,14 @@
     });
 
     var _lastClickedWordSpan = null; // For shift+klikk utvidelse
+
+    function ensureWordsClickable(container, attempt){
+        if(!wordDictReady && (attempt||0) < 40){
+            setTimeout(function(){ ensureWordsClickable(container, (attempt||0)+1); }, 100);
+            return;
+        }
+        makeWordsClickable(container);
+    }
 
     function makeWordsClickable(container){
         var isEditor = currentRole==='editor'||currentRole==='admin';
