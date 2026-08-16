@@ -2477,11 +2477,11 @@
 
     // ── WIKI LINKS ───────────────────────────────────────────────────
     function injectWikiLinks(html,currentFileId){
-        // Splitt HTML i <a>...</a>-blokker (immune) og resten (kan få wiki-lenker)
-        var parts = html.split(/(<a\b[^>]*>[\s\S]*?<\/a>)/gi);
+        // Splitt HTML i <a>...</a>-blokker og <h1>-<h6>-overskrifter (immune) og resten
+        var parts = html.split(/(<a\b[^>]*>[\s\S]*?<\/a>|<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]>)/gi);
         var allPages=getAllFiles(db).sort(function(a,b){return (b.name||'').length-(a.name||'').length;});
         for(var pi=0; pi<parts.length; pi++){
-            if(/^<a\b/i.test(parts[pi])) continue; // Hopp over hele <a>-blokken, immun mot hurtigoppslag
+            if(/^<a\b/i.test(parts[pi]) || /^<h[1-6]\b/i.test(parts[pi])) continue; // Hopp over lenke- og overskriftsblokker
             var segHtml = parts[pi];
             // Plassholdere hindrer at et kortere sidenavn (f.eks. "Newton") wrapper på nytt
             // inni tekst som allerede er pakket i en lenke for et lengre navn ("Isaac Newton")
@@ -3537,6 +3537,8 @@
                 if(!p) return NodeFilter.FILTER_REJECT;
                 var tag = p.tagName;
                 if(tag==='CODE'||tag==='PRE'||tag==='SCRIPT'||tag==='STYLE') return NodeFilter.FILTER_REJECT;
+                if(tag==='H1'||tag==='H2'||tag==='H3'||tag==='H4'||tag==='H5'||tag==='H6') return NodeFilter.FILTER_REJECT;
+                if(p.closest('h1,h2,h3,h4,h5,h6')) return NodeFilter.FILTER_REJECT;
                 if(p.classList.contains('katex')||p.classList.contains('katex-display')) return NodeFilter.FILTER_REJECT;
                 if(p.classList.contains('word-clickable')) return NodeFilter.FILTER_REJECT;
                 if(p.classList.contains('wiki-link')) return NodeFilter.FILTER_REJECT;
