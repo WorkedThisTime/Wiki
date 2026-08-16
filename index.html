@@ -3408,9 +3408,16 @@
             bodyEl.innerHTML = '<div class="fpp-empty">Ingen forklaring lagt til ennå.</div>';
         }
 
-        // Sjekk om det finnes en artikkel med (nesten) samme navn
-        var wLower = word.trim().toLowerCase();
-        var matchFile = getAllFiles(db).find(function(f){ return (f.name||'').trim().toLowerCase() === wLower; });
+        // Sjekk om det finnes en artikkel med samme navn (eller alias)
+        var wKey = wordKey(word);
+        var matchFile = getAllFiles(db).find(function(f){
+            if(wordKey(f.name||'') === wKey) return true;
+            if(f.aliases){
+                var aliasList = f.aliases.split(/[,/]/).map(function(s){ return wordKey(s); });
+                if(aliasList.indexOf(wKey) !== -1) return true;
+            }
+            return false;
+        });
         var moreBtn = document.getElementById('wpp-more-link');
         if(moreBtn) moreBtn.remove();
         if(matchFile){
