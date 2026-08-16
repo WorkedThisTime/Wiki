@@ -5178,7 +5178,7 @@
                 // Hvis admin — gi tilgang umiddelbart, ikke vent på database
                 if(user.email === ADMIN_EMAIL){
                     currentRole = 'admin';
-                    document.body.classList.add('is-editor');
+                    if(!readModeActive) document.body.classList.add('is-editor');
                     showMainApp();
                     // Lagre/oppdater admin i databasen i bakgrunnen
                     dbRef.once('value').then(function(snap){
@@ -5193,7 +5193,7 @@
                     var data = snap.val();
                     if(data && (data.role === 'editor' || data.role === 'viewer')){
                         currentRole = data.role;
-                        if(data.role==='editor'||data.role==='admin') document.body.classList.add('is-editor'); else document.body.classList.remove('is-editor');
+                        if((data.role==='editor'||data.role==='admin') && !readModeActive) document.body.classList.add('is-editor'); else document.body.classList.remove('is-editor');
                         dbRef.update({ email: user.email, name: user.displayName || '', photo: user.photoURL || '' });
                         showMainApp();
                     } else {
@@ -5229,8 +5229,10 @@
     function toggleReadMode(){
         if(currentRole !== 'admin' && currentRole !== 'editor') return;
         readModeActive = !readModeActive;
+        document.body.classList.toggle('is-editor', (currentRole==='admin'||currentRole==='editor') && !readModeActive);
         applyRoleUI();
         render(); // re-render kort så knapper på mapper/filer oppdateres
+        refreshWordLinks(); // Bygg ord-lenker på nytt med riktig tilgangsnivå
         var btn = document.getElementById('readmode-btn');
         if(btn) btn.innerHTML = readModeActive ? '<span>✏️</span> Bytt til redigeringsmodus' : '<span>👁️</span> Bytt til lesemodus';
         showToast(readModeActive ? '👁️ Lesemodus aktivert' : '✏️ Redigeringsmodus aktivert', 'success');
