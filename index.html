@@ -5516,9 +5516,12 @@
     }
 
     function closeMobileSidebar(){
-        document.querySelector('.sidebar').classList.remove('mob-open');
-        document.getElementById('sidebar-overlay').style.display = 'none';
-        document.getElementById('mob-btn-utforsker').classList.remove('mob-active');
+        var sb = document.querySelector('.sidebar');
+        if(sb) sb.classList.remove('mob-open');
+        var ov = document.getElementById('sidebar-overlay');
+        if(ov) ov.style.display = 'none';
+        var mb = document.getElementById('mob-btn-utforsker');
+        if(mb) mb.classList.remove('mob-active');
     }
 
     // Close sidebar when navigating on mobile
