@@ -684,7 +684,7 @@
     <div id="fp-body" style="flex:1; min-height:0; overflow-y:auto;"><div class="fp-empty">Klikk på en formel i dokumentet for å se forklaringen.</div></div>
     <div id="fp-editor" style="display:none; flex-shrink:0;">
         <div class="fp-label" style="margin-bottom:6px;">✏️ Rediger forklaring</div>
-        <textarea class="fp-edit-area" id="fp-textarea" placeholder="Skriv forklaring her..." onblur="autosaveFormulaExplanation()"></textarea>
+        <textarea class="fp-edit-area" id="fp-textarea" placeholder="Skriv forklaring her..." onblur="autosaveFormulaExplanation(); _fpSkipNextClose=true;"></textarea>
         <div class="fp-hint">Lagres i den globale formelordboken og er tilgjengelig i hele wikien.</div>
         <div style="display:flex;gap:8px;margin-top:8px;">
             <button class="btn btn-primary" onclick="saveFormulaExplanation()" style="flex:1;justify-content:center;">Lagre</button>
@@ -712,7 +712,7 @@
     <div id="wpp-editor" style="display:none;margin-top:24px;border-top:1px solid var(--border);padding-top:20px;">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:8px;">✏️ Rediger forklaring</div>
         <button class="btn btn-outline" id="wpp-copy-btn" onclick="copyWordTemplate()" style="width:100%;justify-content:center;margin-bottom:8px;font-size:12px;">📋 Kopier mal for Gemini</button>
-        <textarea id="wpp-textarea" class="fp-edit-area" placeholder="Skriv ordforklaring her... (støtter Markdown og $formler$)" onblur="autosaveWordExplanation()"></textarea>
+        <textarea id="wpp-textarea" class="fp-edit-area" placeholder="Skriv ordforklaring her... (støtter Markdown og $formler$)" onblur="autosaveWordExplanation(); _wppSkipNextClose=true;"></textarea>
         <div class="fp-hint" style="margin-top:4px;">Lagres i ordboken og vises for alle lesere.</div>
         <div style="display:flex;gap:8px;margin-top:10px;">
             <button class="btn btn-primary" onclick="saveWordExplanation()" style="flex:1;justify-content:center;">Lagre</button>
@@ -3261,6 +3261,7 @@
     }
 
     function openFormulaPanel(latex, sourceEl){
+        _fpSkipNextClose = false;
         var prev = document.querySelector('.katex-clickable.fp-active');
         if(prev) prev.classList.remove('fp-active');
         if(sourceEl) sourceEl.classList.add('fp-active');
@@ -3419,6 +3420,7 @@
     }
 
     function openWordPopup(word, sourceEl){
+        _wppSkipNextClose = false;
         var popup = document.getElementById('word-popup');
         currentWordKey = wordKey(word);
         document.getElementById('wpp-word-label').textContent = word;
@@ -3505,9 +3507,11 @@
         currentWordKey = null;
     }
 
+    var _wppSkipNextClose = false;
     document.addEventListener('click', function(e){
         var popup = document.getElementById('word-popup');
         if(popup && popup.classList.contains('open') && !popup.contains(e.target) && !e.target.classList.contains('word-clickable')){
+            if(_wppSkipNextClose){ _wppSkipNextClose = false; return; }
             closeWordPopup();
         }
     });
@@ -3726,6 +3730,15 @@
         var popup = document.getElementById('formula-popup');
         if(popup){ popup.classList.remove('open'); popup.style.display = 'none'; }
     }
+
+    var _fpSkipNextClose = false;
+    document.addEventListener('click', function(e) {
+        var panel = document.getElementById('formula-panel');
+        if(panel && panel.classList.contains('open') && !panel.contains(e.target) && !e.target.classList.contains('katex-clickable') && !e.target.closest('.katex-clickable')){
+            if(_fpSkipNextClose){ _fpSkipNextClose = false; return; }
+            closeFormulaPanel();
+        }
+    });
 
     document.addEventListener('click', function(e) {
         var popup = document.getElementById('formula-popup');
