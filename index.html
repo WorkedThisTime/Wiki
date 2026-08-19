@@ -3576,7 +3576,7 @@
                 if(tag==='CODE'||tag==='PRE'||tag==='SCRIPT'||tag==='STYLE') return NodeFilter.FILTER_REJECT;
                 if(tag==='H1'||tag==='H2'||tag==='H3'||tag==='H4'||tag==='H5'||tag==='H6') return NodeFilter.FILTER_REJECT;
                 if(p.closest('h1,h2,h3,h4,h5,h6')) return NodeFilter.FILTER_REJECT;
-                if(p.classList.contains('katex')||p.classList.contains('katex-display')) return NodeFilter.FILTER_REJECT;
+                if(p.closest('.katex, .katex-display')) return NodeFilter.FILTER_REJECT;
                 if(p.classList.contains('word-clickable')) return NodeFilter.FILTER_REJECT;
                 if(p.classList.contains('wiki-link')) return NodeFilter.FILTER_REJECT;
                 if(tag==='A') return NodeFilter.FILTER_REJECT;
