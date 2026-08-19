@@ -1150,7 +1150,7 @@
             {left:'$', right:'$', display:false}, {left:'\\(', right:'\\)', display:false}
         ],
         throwOnError: false, errorColor: '#da3633',
-        macros: {"\\vec":"\\mathbf{#1}", "\\Sigma":"\\sum"}
+        macros: {"\\Sigma":"\\sum"}
     };
     const firebaseConfig = {
         apiKey: "AIzaSyD9oYCl9vyGc3c4fp5LOzW4V8oIJgONx2Y",
@@ -3864,7 +3864,7 @@
             var isDisplay = el.hasAttribute('data-display');
             try {
                 katex.render(latex, el, { throwOnError: false, displayMode: isDisplay,
-                    macros: {"\\vec":"\\mathbf{#1}", "\\Sigma":"\\sum"} });
+                    macros: {"\\Sigma":"\\sum"} });
             } catch(e) { el.textContent = latex; }
         });
     }
