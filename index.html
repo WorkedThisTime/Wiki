@@ -103,6 +103,14 @@
         .card:hover { transform: translateY(-4px); border-color: var(--blue); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
         .card-title-bar { background: linear-gradient(transparent, rgba(0,0,0,0.9)); padding: 20px 15px 15px; color: white; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
         .file-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: 0.2s; border-left: 4px solid var(--blue); position: relative; }
+        .select-checkbox { position:absolute; top:8px; left:8px; width:20px; height:20px; z-index:5; display:none; accent-color:var(--blue); cursor:pointer; }
+        body.select-mode .select-checkbox { display:block; }
+        body.select-mode .card, body.select-mode .file-card { cursor:default; }
+        body.select-mode .item-actions { display:none; }
+        .card.item-selected, .file-card.item-selected { outline:2px solid var(--blue); outline-offset:-2px; background:rgba(91,143,255,0.08); }
+        #bulk-toolbar { display:none; align-items:center; gap:10px; padding:10px 16px; background:var(--card-bg); border:1px solid var(--border); border-radius:8px; margin-bottom:14px; }
+        #bulk-toolbar.active { display:flex; }
+        #bulk-count { font-size:13px; color:var(--text-muted); margin-right:auto; }
         .file-card:hover { background: var(--border); transform: translateY(-2px); }
         .file-meta { font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; }
 
@@ -1057,7 +1065,16 @@
                 <div id="quiz-list"></div>
             </div>
 
-            <div style="margin:0 0 15px 0;"><button class="btn btn-outline" onclick="goBack()">⬅️ Tilbake</button></div>
+            <div style="margin:0 0 15px 0; display:flex; gap:10px; align-items:center;">
+                <button class="btn btn-outline" onclick="goBack()">⬅️ Tilbake</button>
+                <button class="btn btn-outline edit-only" id="select-mode-btn" onclick="toggleSelectMode()" style="margin-left:auto;">☑️ Velg flere</button>
+            </div>
+            <div id="bulk-toolbar">
+                <span id="bulk-count">0 valgt</span>
+                <button class="btn btn-outline" onclick="selectAllVisible()">Velg alle</button>
+                <button class="btn btn-danger" onclick="deleteSelectedItems()">🗑️ Slett valgte</button>
+                <button class="btn btn-outline" onclick="toggleSelectMode()">Avbryt</button>
+            </div>
             <div id="folder-section">
                 <h3 style="font-size:15px; color:var(--text-muted); border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:20px;">Undermapper</h3>
                 <div id="folder-grid" class="grid"></div>
@@ -2340,14 +2357,14 @@
                 folderCount++; el.className="card";
                 if(item.thumbnail) el.style.backgroundImage = "url('"+item.thumbnail+"')";
                 var _fe=canUserEdit()?'<div class="item-actions"><button class="kebab-btn" onclick="toggleKebab(event,\'km-'+item.id+'\')">···</button><div class="kebab-menu" id="km-'+item.id+'"><button class="kebab-item" onclick="stopAndRun(event,renameItem,\''+item.id+'\')">✏️ Gi nytt navn</button><button class="kebab-item" onclick="stopAndRun(event,setThumbnail,\''+item.id+'\')">🖼️ Miniatyrbilde</button><button class="kebab-item" onclick="stopAndRun(event,openMoveModal,\''+item.id+'\')">📦 Flytt</button><button class="kebab-item" onclick="stopAndRun(event,copyItem,\''+item.id+'\')">📋 Kopier JSON</button><div class="kebab-sep"></div><button class="kebab-item" onclick="stopAndRun(event,openBookReader,\''+item.id+'\')">📖 Åpne som bok</button><div class="kebab-sep"></div><button class="kebab-item danger" onclick="stopAndRun(event,deleteItem,\''+item.id+'\')">🗑️ Slett</button></div></div>':'';
-                el.innerHTML=_fe+'<div class="card-title-bar">'+sanitizeHTML(item.name)+'</div>';
-                el.onclick=function(){currentPath.push(item);render();};
+                el.innerHTML='<input type="checkbox" class="select-checkbox" data-id="'+item.id+'" onclick="event.stopPropagation();toggleItemSelected(\''+item.id+'\',this)">'+_fe+'<div class="card-title-bar">'+sanitizeHTML(item.name)+'</div>';
+                el.onclick=function(){ if(selectModeActive){ toggleItemSelectedByCard(item.id, el); return; } currentPath.push(item);render();};
                 fGrid.appendChild(el);
             } else if(item.type==='file'){
                 fileCount++; el.className="file-card";
                 var _fle=canUserEdit()?'<div class="item-actions"><button class="kebab-btn" onclick="toggleKebab(event,\'km-'+item.id+'\')">···</button><div class="kebab-menu" id="km-'+item.id+'"><button class="kebab-item" onclick="stopAndRun(event,renameItem,\''+item.id+'\')">✏️ Gi nytt navn</button><button class="kebab-item" onclick="stopAndRun(event,openMoveModal,\''+item.id+'\')">📦 Flytt</button><button class="kebab-item" onclick="stopAndRun(event,copyItem,\''+item.id+'\')">📋 Kopier innhold</button><div class="kebab-sep"></div><button class="kebab-item danger" onclick="stopAndRun(event,deleteItem,\''+item.id+'\')">🗑️ Slett</button></div></div>':'';
-                el.innerHTML=_fle+'<div style="font-size:14px;font-weight:600;padding-right:30px;margin-top:15px;">📄 '+sanitizeHTML(item.name)+'</div><div class="file-meta"><span>Sist endret:</span><span>'+(item.updatedAt?new Date(item.updatedAt).toLocaleDateString('no-NO'):'Ukjent')+'</span></div>';
-                el.onclick=function(){currentPath.push(item);render();};
+                el.innerHTML='<input type="checkbox" class="select-checkbox" data-id="'+item.id+'" onclick="event.stopPropagation();toggleItemSelected(\''+item.id+'\',this)">'+_fle+'<div style="font-size:14px;font-weight:600;padding-right:30px;margin-top:15px;">📄 '+sanitizeHTML(item.name)+'</div><div class="file-meta"><span>Sist endret:</span><span>'+(item.updatedAt?new Date(item.updatedAt).toLocaleDateString('no-NO'):'Ukjent')+'</span></div>';
+                el.onclick=function(){ if(selectModeActive){ toggleItemSelectedByCard(item.id, el); return; } currentPath.push(item);render();};
                 fileGrid.appendChild(el);
             }
         });
@@ -2845,6 +2862,88 @@
         } else {
             doCopy();
         }
+    }
+
+    // ── FLERVALG OG MASSESLETTING ──────────────────────────────────────
+    var selectModeActive = false;
+    var selectedItemIds = {};
+
+    function toggleSelectMode(){
+        selectModeActive = !selectModeActive;
+        selectedItemIds = {};
+        document.body.classList.toggle('select-mode', selectModeActive);
+        document.getElementById('bulk-toolbar').classList.toggle('active', selectModeActive);
+        var btn = document.getElementById('select-mode-btn');
+        if(btn) btn.textContent = selectModeActive ? '✖️ Avslutt valg' : '☑️ Velg flere';
+        updateBulkCount();
+        render();
+    }
+
+    function toggleItemSelected(id, checkbox){
+        if(checkbox.checked) selectedItemIds[id] = true;
+        else delete selectedItemIds[id];
+        var card = checkbox.closest('.card, .file-card');
+        if(card) card.classList.toggle('item-selected', !!checkbox.checked);
+        updateBulkCount();
+    }
+
+    function toggleItemSelectedByCard(id, card){
+        var checkbox = card.querySelector('.select-checkbox');
+        checkbox.checked = !checkbox.checked;
+        toggleItemSelected(id, checkbox);
+    }
+
+    function updateBulkCount(){
+        var n = Object.keys(selectedItemIds).length;
+        var el = document.getElementById('bulk-count');
+        if(el) el.textContent = n + ' valgt';
+    }
+
+    function selectAllVisible(){
+        document.querySelectorAll('.select-checkbox').forEach(function(cb){
+            cb.checked = true;
+            toggleItemSelected(cb.dataset.id, cb);
+        });
+    }
+
+    function deleteSelectedItems(){
+        var ids = Object.keys(selectedItemIds);
+        if(ids.length === 0){ showToast('Ingen elementer valgt.'); return; }
+
+        // Sjekk om noen av de valgte mappene ikke er tomme
+        var nonEmptyFolders = [];
+        ids.forEach(function(id){
+            var parent = findParentById(db, id);
+            if(!parent) return;
+            var item = parent.children.find(function(c){ return c.id === id; });
+            if(item && item.type === 'folder' && Array.isArray(item.children) && item.children.length > 0){
+                nonEmptyFolders.push(item.name);
+            }
+        });
+        if(nonEmptyFolders.length > 0){
+            showToast('❌ Følgende mapper er ikke tomme: ' + nonEmptyFolders.join(', '), 'error');
+            return;
+        }
+
+        if(!confirm('Slette ' + ids.length + ' element(er) permanent? Dette kan ikke angres.')) return;
+
+        ids.forEach(function(id){
+            var parent = findParentById(db, id);
+            if(!parent) return;
+            var idx = parent.children.findIndex(function(c){ return c.id === id; });
+            if(idx !== -1) parent.children.splice(idx, 1);
+        });
+
+        selectedItemIds = {};
+        selectModeActive = false;
+        document.body.classList.remove('select-mode');
+        document.getElementById('bulk-toolbar').classList.remove('active');
+        var btn = document.getElementById('select-mode-btn');
+        if(btn) btn.textContent = '☑️ Velg flere';
+
+        saveToDatabase();
+        render();
+        showToast('✅ ' + ids.length + ' element(er) slettet', 'success');
     }
 
     function deleteItem(e,id){
