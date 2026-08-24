@@ -206,38 +206,45 @@
         .fp-edit-area { width:100%; font-family:monospace; font-size:12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-main); border-radius:6px; padding:8px; resize:vertical; min-height:80px; box-sizing:border-box; }
         .fp-hint { font-size:11px; color:var(--text-muted); margin-top:2px; }
         /* ── BOK-LESER ── */
-        #book-reader { position:fixed; inset:0; z-index:7000; background:var(--bg); display:none; flex-direction:row; }
+        #book-reader { position:fixed; inset:0; z-index:7000; background:#1a1610; display:none; flex-direction:row; }
         #book-reader.open { display:flex; }
-        #book-sidebar { width:280px; min-width:220px; max-width:320px; background:var(--header-bg); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; }
-        #book-sidebar-header { padding:18px 16px 10px; border-bottom:1px solid var(--border); flex-shrink:0; }
-        #book-title-main { font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:2px; word-break:break-word; }
-        #book-sidebar-search { width:100%; box-sizing:border-box; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:6px; color:var(--text-main); padding:6px 10px; font-size:12px; margin-top:8px; }
+        #book-sidebar { width:280px; min-width:220px; max-width:320px; background:#211c15; border-right:1px solid rgba(212,180,131,0.15); display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; }
+        #book-sidebar-header { padding:18px 16px 10px; border-bottom:1px solid rgba(212,180,131,0.15); flex-shrink:0; }
+        #book-title-main { font-family:Georgia,'Times New Roman',serif; font-size:15px; font-weight:700; color:#e8dcc4; margin-bottom:2px; word-break:break-word; }
+        #book-sidebar-search { width:100%; box-sizing:border-box; background:rgba(255,255,255,0.04); border:1px solid rgba(212,180,131,0.2); border-radius:6px; color:#e8dcc4; padding:6px 10px; font-size:12px; margin-top:8px; }
         #book-toc { flex:1; overflow-y:auto; padding:8px 0; }
-        .btoc-chapter { padding:10px 14px 4px; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:var(--text-main); margin-top:14px; border-top:1px solid rgba(255,255,255,0.06); }
+        .btoc-chapter { font-family:Georgia,serif; padding:10px 14px 4px; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#d4b483; margin-top:14px; border-top:1px solid rgba(212,180,131,0.1); }
         .btoc-chapter:first-child { border-top:none; margin-top:0; }
-        .btoc-sub { display:flex; align-items:center; gap:6px; padding:6px 14px 3px 20px; font-size:10px; font-weight:700; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:.07em; margin-top:4px; }
-        .btoc-sub::before { content:''; display:block; width:12px; height:1px; background:rgba(255,255,255,0.2); flex-shrink:0; }
-        .btoc-page { display:flex; align-items:center; gap:8px; padding:6px 14px 6px 28px; cursor:pointer; font-size:13px; color:var(--text-muted); border-left:2px solid transparent; transition:.15s; }
+        .btoc-sub { display:flex; align-items:center; gap:6px; padding:6px 14px 3px 20px; font-size:10px; font-weight:700; color:rgba(232,220,196,0.4); text-transform:uppercase; letter-spacing:.07em; margin-top:4px; }
+        .btoc-sub::before { content:''; display:block; width:12px; height:1px; background:rgba(212,180,131,0.25); flex-shrink:0; }
+        .btoc-page { display:flex; align-items:center; gap:8px; padding:6px 14px 6px 28px; cursor:pointer; font-size:13px; color:rgba(232,220,196,0.55); border-left:2px solid transparent; transition:.15s; }
         .btoc-page.has-sub { padding-left:38px; }
-        .btoc-page:hover { background:rgba(255,255,255,0.05); color:var(--text-main); }
-        .btoc-page.active { color:var(--blue); border-left-color:var(--blue); background:rgba(91,143,255,0.08); }
+        .btoc-page:hover { background:rgba(212,180,131,0.06); color:#e8dcc4; }
+        .btoc-page.active { color:#d4b483; border-left-color:#d4b483; background:rgba(212,180,131,0.08); }
         .btoc-page-num { margin-left:auto; font-size:10px; opacity:.35; font-family:monospace; }
-        #book-main { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
-        #book-topbar { display:flex; align-items:center; gap:10px; padding:10px 20px; border-bottom:1px solid var(--border); background:var(--header-bg); flex-shrink:0; }
-        #book-nav-prev, #book-nav-next { padding:6px 14px; font-size:12px; }
-        #book-page-indicator { font-size:12px; color:var(--text-muted); font-family:monospace; margin:0 auto; }
-        #book-content-wrap { flex:1; overflow-y:auto; padding:48px max(40px,calc(50% - 380px)); }
-        #book-content { max-width:760px; margin:0 auto; }
-        #book-page-body { font-size:15px; line-height:1.8; color:var(--text-main); }
-        #book-page-nav { display:flex; justify-content:space-between; align-items:center; margin-top:60px; padding-top:24px; border-top:1px solid var(--border); }
-        .book-page-nav-btn { display:flex; flex-direction:column; gap:4px; max-width:45%; }
+        #book-main { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; background:#1a1610; }
+        #book-topbar { display:flex; align-items:center; gap:10px; padding:10px 20px; border-bottom:1px solid rgba(212,180,131,0.15); background:#1a1610; flex-shrink:0; }
+        #book-nav-prev, #book-nav-next { padding:6px 14px; font-size:12px; font-family:Georgia,serif; background:transparent; border:1px solid rgba(212,180,131,0.3); color:#d4b483; }
+        #book-nav-prev:hover, #book-nav-next:hover { background:rgba(212,180,131,0.1); }
+        #book-page-indicator { font-size:12px; color:rgba(232,220,196,0.4); font-family:Georgia,serif; font-style:italic; margin:0 auto; }
+        #book-content-wrap { flex:1; overflow-y:auto; padding:56px max(32px,calc(50% - 370px)) 40px; background: radial-gradient(ellipse at top, #2b2620 0%, #1a1610 70%); }
+        #book-page-paper { max-width:700px; margin:0 auto; background:#f4ecd8; color:#2b2620; border-radius:2px; box-shadow:0 20px 60px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3); padding:64px 68px 50px; min-height:70vh; position:relative; animation:pageIn .35s ease; }
+        @keyframes pageIn { from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+        #book-content { max-width:560px; margin:0 auto; }
+        #book-page-body { font-family:Georgia,'Times New Roman',serif; font-size:17px; line-height:1.85; color:#2b2620; }
+        #book-page-body h1, #book-page-body h2, #book-page-body h3 { font-family:Georgia,serif; color:#2b2620; }
+        #book-page-body p:first-of-type::first-letter { font-family:Georgia,serif; font-size:3.6em; font-weight:700; float:left; line-height:0.8; padding:0.08em 0.08em 0 0; color:#8a5a2b; }
+        #book-page-body a { color:#8a5a2b; }
+        #book-page-number { text-align:center; font-family:Georgia,serif; font-style:italic; font-size:12px; color:rgba(43,38,32,0.45); margin-top:50px; letter-spacing:.05em; }
+        #book-page-nav { display:flex; justify-content:space-between; align-items:center; margin-top:36px; padding-top:20px; border-top:1px solid rgba(43,38,32,0.15); }
+        .book-page-nav-btn { display:flex; flex-direction:column; gap:4px; max-width:45%; font-family:Georgia,serif; }
         .book-page-nav-btn.next { align-items:flex-end; }
-        .bpnb-label { font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); }
-        .bpnb-title { font-size:13px; font-weight:600; color:var(--blue); cursor:pointer; }
+        .bpnb-label { font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:rgba(43,38,32,0.45); }
+        .bpnb-title { font-size:13px; font-weight:600; color:#8a5a2b; cursor:pointer; font-style:italic; }
         .bpnb-title:hover { text-decoration:underline; }
-        #book-progress { height:2px; background:rgba(255,255,255,0.06); flex-shrink:0; }
-        #book-progress-bar { height:100%; background:var(--blue); transition:width .3s; }
-        @media(max-width:700px){ #book-sidebar{display:none;} #book-content-wrap{padding:24px 16px;} }
+        #book-progress { height:2px; background:rgba(212,180,131,0.1); flex-shrink:0; }
+        #book-progress-bar { height:100%; background:#d4b483; transition:width .3s; }
+        @media(max-width:700px){ #book-sidebar{display:none;} #book-content-wrap{padding:24px 12px;} #book-page-paper{padding:32px 24px;} }
         #formula-popup { position:fixed; z-index:7500; background:var(--header-bg); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,0.5); padding:16px; width:300px; max-width:calc(100vw - 32px); display:none; }
         #formula-popup.open { display:block; }
         #word-popup { position:fixed; top:0; right:-520px; width:480px; max-width:92vw; height:100vh; background:var(--header-bg); backdrop-filter:blur(20px); border-left:1px solid var(--border); z-index:7500; transition:0.35s cubic-bezier(0.16,1,0.3,1); padding:32px 28px; overflow-y:auto; box-shadow:-10px 0 40px rgba(0,0,0,0.5); display:flex; flex-direction:column; gap:16px; }
@@ -651,21 +658,24 @@
     </div>
     <div id="book-main">
         <div id="book-topbar">
-            <button class="btn btn-outline" id="book-nav-prev" onclick="bookNavPage(-1)">← Forrige</button>
-            <div id="book-page-indicator">1 / 1</div>
-            <button class="btn btn-outline" id="book-nav-next" onclick="bookNavPage(1)">Neste →</button>
+            <button class="btn btn-outline" id="book-nav-prev" onclick="bookNavPage(-1)">‹ Forrige side</button>
+            <div id="book-page-indicator">1 av 1</div>
+            <button class="btn btn-outline" id="book-nav-next" onclick="bookNavPage(1)">Neste side ›</button>
             <div style="margin-left:auto;display:flex;gap:8px;">
                 <button class="btn btn-outline" style="font-size:11px;padding:5px 10px;" onclick="document.getElementById('book-sidebar').style.display=document.getElementById('book-sidebar').style.display==='none'?'flex':'none'">☰</button>
             </div>
         </div>
         <div id="book-progress"><div id="book-progress-bar" style="width:0%"></div></div>
         <div id="book-content-wrap">
-            <div id="book-content">
-                <div id="book-page-body"></div>
-                <div id="book-page-nav">
-                    <div class="book-page-nav-btn prev" id="book-prev-block"></div>
-                    <div class="book-page-nav-btn next" id="book-next-block"></div>
+            <div id="book-page-paper">
+                <div id="book-content">
+                    <div id="book-page-body"></div>
+                    <div id="book-page-nav">
+                        <div class="book-page-nav-btn prev" id="book-prev-block"></div>
+                        <div class="book-page-nav-btn next" id="book-next-block"></div>
+                    </div>
                 </div>
+                <div id="book-page-number"></div>
             </div>
         </div>
     </div>
@@ -4089,7 +4099,13 @@
         // Fremgang
         var pct = bookPages.length > 1 ? (idx / (bookPages.length-1) * 100) : 100;
         document.getElementById('book-progress-bar').style.width = pct + '%';
-        document.getElementById('book-page-indicator').textContent = (idx+1) + ' / ' + bookPages.length;
+        document.getElementById('book-page-indicator').textContent = (idx+1) + ' av ' + bookPages.length;
+        var pageNumEl = document.getElementById('book-page-number');
+        if(pageNumEl) pageNumEl.textContent = '— ' + (idx+1) + ' —';
+
+        // Myk sideoverganseffekt
+        var paper = document.getElementById('book-page-paper');
+        if(paper){ paper.style.animation = 'none'; void paper.offsetWidth; paper.style.animation = 'pageIn .35s ease'; }
 
         // Knapper
         document.getElementById('book-nav-prev').disabled = idx === 0;
