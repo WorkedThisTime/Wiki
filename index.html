@@ -266,9 +266,9 @@
         .fep-toggle:hover { background:rgba(255,0,0,0.1); color:#f87171; border-color:rgba(255,0,0,0.3); }
         .fep-toggle.is-excluded { background:rgba(255,0,0,0.1); color:#f87171; border-color:rgba(255,0,0,0.3); }
         .fep-toggle.is-excluded:hover { background:rgba(34,197,94,0.1); color:#4ade80; border-color:rgba(34,197,94,0.3); }
-        #quickview-panel { position: fixed; top: 0; right: -500px; width: var(--panel-width); height: 100vh; background: var(--header-bg); backdrop-filter: blur(20px); border-left: 1px solid var(--border); z-index: 6000; transition: 0.4s cubic-bezier(0.16,1,0.3,1); padding: 40px; overflow-y: auto; box-shadow: -10px 0 40px rgba(0,0,0,0.5); }
+        #quickview-panel { position: fixed; top: 0; right: -500px; width: var(--panel-width); height: 100vh; background: var(--header-bg); backdrop-filter: blur(20px); border-left: 1px solid var(--border); z-index: 7200; transition: 0.4s cubic-bezier(0.16,1,0.3,1); padding: 40px; overflow-y: auto; box-shadow: -10px 0 40px rgba(0,0,0,0.5); }
         #quickview-panel.open { right: 0; }
-        #qv-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 5999; display: none; backdrop-filter: blur(2px); pointer-events: none; }
+        #qv-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 7199; display: none; backdrop-filter: blur(2px); pointer-events: none; }
         #qv-overlay.active { pointer-events: auto; }
 
         .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); display:none; justify-content:center; align-items:center; z-index: 7000; backdrop-filter: blur(3px); }
@@ -3174,7 +3174,11 @@
             executeBlocks(bodyEl, result.blocks);
             resolveDbImages(bodyEl);
         }catch(e){bodyEl.innerHTML='<pre>'+sanitizeHTML(item.content)+'</pre>';}
-        document.getElementById('qv-full-btn').onclick=function(){navigateToId(id);};
+        document.getElementById('qv-full-btn').onclick=function(){
+            var bookReader = document.getElementById('book-reader');
+            if(bookReader && bookReader.classList.contains('open')) closeBookReader();
+            navigateToId(id);
+        };
         document.getElementById('quickview-panel').classList.add('open');
         document.getElementById('qv-overlay').style.display="flex"; document.getElementById('qv-overlay').classList.add('active');
         setTimeout(function(){
@@ -3558,6 +3562,8 @@
             btn.textContent = '📖 Mer om ' + matchFile.name;
             btn.onclick = function(){
                 closeWordPopup();
+                var bookReader = document.getElementById('book-reader');
+                if(bookReader && bookReader.classList.contains('open')) closeBookReader();
                 navigateToId(matchFile.id);
             };
             bodyEl.parentElement.insertBefore(btn, bodyEl.nextSibling);
