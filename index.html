@@ -144,7 +144,8 @@
         #text-edit-area:focus { border-color: var(--blue); }
         #text-edit-area.drag-active { border-color: var(--blue); background: rgba(88,166,255,0.05); }
 
-        #text-display { line-height: 1.8; font-size: 1.1rem; max-width: 900px; margin: 0 auto; padding-bottom: 50px; }
+        #text-display { line-height: 1.8; font-size: 1.1rem; max-width: 900px; margin: 0 auto; padding-bottom: 50px; transform: translateX(calc(-1 * var(--toc-w, 260px) / 2)); }
+        body.is-editing #text-display { transform: none; }
         #text-display img { max-width: 50%; max-height: 50%; border-radius: 8px; margin: 20px 0; display: block; }
         #text-display blockquote { border-left: 4px solid var(--blue); padding-left: 15px; color: var(--text-muted); margin: 20px 0; }
         #text-display table { width: 100%; border-collapse: collapse; margin: 20px 0; }
@@ -2308,12 +2309,14 @@
             document.getElementById('browser-view').style.display="block";
             document.getElementById('editor-view').style.display="none";
             document.getElementById('middle-panel').style.display="none";
+            document.documentElement.style.setProperty('--toc-w', '0px');
             renderFolderContent(currentItem);
             renderQuizSection();
         } else {
             document.getElementById('browser-view').style.display="none";
             document.getElementById('editor-view').style.display="flex";
             document.getElementById('middle-panel').style.display=isIndexVisible?"flex":"none";
+            document.documentElement.style.setProperty('--toc-w', isIndexVisible ? '260px' : '0px');
             renderEditorAndPreview(currentItem);
         }
     }
