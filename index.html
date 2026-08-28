@@ -5533,24 +5533,15 @@
         errEl.style.display = 'none';
 
         var provider = new firebase.auth.GoogleAuthProvider();
-        // Popup-innlogging er upålitelig på mobil (blokkeres ofte, eller henger seg opp
-        // uten feilmelding). Bruk redirect-flyt på mobil/nettbrett, popup på desktop.
-        var isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth <= 768;
-        if(isMobileDevice){
-            auth.signInWithRedirect(provider).catch(function(error){
-                btn.style.display = 'flex';
-                loading.style.display = 'none';
-                errEl.style.display = 'block';
-                errEl.textContent = '❌ Innlogging mislyktes: ' + error.message;
-            });
-        } else {
-            auth.signInWithPopup(provider).catch(function(error){
-                btn.style.display = 'flex';
-                loading.style.display = 'none';
-                errEl.style.display = 'block';
-                errEl.textContent = '❌ Innlogging mislyktes: ' + error.message;
-            });
-        }
+        // Bruker alltid redirect-innlogging. Popup-varianten (signInWithPopup) blokkeres
+        // av Cross-Origin-Opener-Policy i mange moderne nettlesere/hosting-tjenester,
+        // som gjør at innloggingen henger seg opp uten synlig feilmelding.
+        auth.signInWithRedirect(provider).catch(function(error){
+            btn.style.display = 'flex';
+            loading.style.display = 'none';
+            errEl.style.display = 'block';
+            errEl.textContent = '❌ Innlogging mislyktes: ' + error.message;
+        });
     }
 
     function signOut(){
