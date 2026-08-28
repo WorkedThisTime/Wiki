@@ -145,6 +145,7 @@
         #text-edit-area.drag-active { border-color: var(--blue); background: rgba(88,166,255,0.05); }
 
         #text-display { line-height: 1.8; font-size: 1.1rem; max-width: 900px; margin: 0 auto; padding-bottom: 50px; transform: translateX(calc(-1 * var(--toc-w, 260px) / 2)); }
+        body.force-mobile #text-display { transform: none; max-width: 100%; }
         body.is-editing #text-display { transform: none; }
         #text-display img { max-width: 50%; max-height: 50%; border-radius: 8px; margin: 20px 0; display: block; }
         #text-display blockquote { border-left: 4px solid var(--blue); padding-left: 15px; color: var(--text-muted); margin: 20px 0; }
@@ -244,6 +245,7 @@
         #book-page-indicator { font-size:12px; color:rgba(232,220,196,0.4); font-family:Georgia,serif; font-style:italic; margin:0 auto; }
         #book-content-wrap { flex:1; overflow-y:auto; padding:56px max(32px,calc(50% - 370px)) 40px; background: radial-gradient(ellipse at top, #2b2620 0%, #1a1610 70%); }
         #book-page-paper { transform: translateX(calc(-1 * var(--book-sidebar-w, 280px) / 2)); }
+        @media(max-width:700px){ #book-page-paper{ transform:none; } }
         #book-page-paper { max-width:700px; margin:0 auto; background:#f4ecd8; color:#2b2620; border-radius:2px; box-shadow:0 20px 60px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3); padding:64px 68px 50px; min-height:70vh; position:relative; animation:pageIn .35s ease; }
         @keyframes pageIn { from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
         #book-content { max-width:560px; margin:0 auto; }
@@ -2338,7 +2340,8 @@
             document.getElementById('browser-view').style.display="none";
             document.getElementById('editor-view').style.display="flex";
             document.getElementById('middle-panel').style.display=isIndexVisible?"flex":"none";
-            document.documentElement.style.setProperty('--toc-w', isIndexVisible ? '260px' : '0px');
+            var isMobileView = document.body.classList.contains('force-mobile');
+            document.documentElement.style.setProperty('--toc-w', (isIndexVisible && !isMobileView) ? '260px' : '0px');
             renderEditorAndPreview(currentItem);
         }
     }
