@@ -5413,6 +5413,16 @@
 
     function initAuth(){
         auth = firebase.auth();
+        // Fanger opp resultatet fra signInWithRedirect (mobil) når siden laster på nytt.
+        // Vis en tydelig feil hvis noe gikk galt under redirect-innlogging.
+        auth.getRedirectResult().catch(function(error){
+            var errEl = document.getElementById('lock-error');
+            var btn = document.getElementById('google-signin-btn');
+            var loading = document.getElementById('lock-loading');
+            if(btn) btn.style.display = 'flex';
+            if(loading) loading.style.display = 'none';
+            if(errEl){ errEl.style.display = 'block'; errEl.textContent = '❌ Innlogging mislyktes: ' + error.message; }
+        });
         auth.onAuthStateChanged(function(user){
             if(user){
                 currentUser = user;
@@ -5517,12 +5527,24 @@
         errEl.style.display = 'none';
 
         var provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch(function(error){
-            btn.style.display = 'flex';
-            loading.style.display = 'none';
-            errEl.style.display = 'block';
-            errEl.textContent = '❌ Innlogging mislyktes: ' + error.message;
-        });
+        // Popup-innlogging er upålitelig på mobil (blokkeres ofte, eller henger seg opp
+        // uten feilmelding). Bruk redirect-flyt på mobil/nettbrett, popup på desktop.
+        var isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth <= 768;
+        if(isMobileDevice){
+            auth.signInWithRedirect(provider).catch(function(error){
+                btn.style.display = 'flex';
+                loading.style.display = 'none';
+                errEl.style.display = 'block';
+                errEl.textContent = '❌ Innlogging mislyktes: ' + error.message;
+            });
+        } else {
+            auth.signInWithPopup(provider).catch(function(error){
+                btn.style.display = 'flex';
+                loading.style.display = 'none';
+                errEl.style.display = 'block';
+                errEl.textContent = '❌ Innlogging mislyktes: ' + error.message;
+            });
+        }
     }
 
     function signOut(){
@@ -5820,7 +5842,13 @@
     function initializeApp(){
         checkKaTeXReady();
         // Tema er låst til mørk modus
-        if(localStorage.getItem('viewMode')==='mobile'){
+        // Bruk lagret valg hvis brukeren har byttet manuelt, ellers velg automatisk
+        // basert på faktisk enhet (mobil/nettbrett vs. PC).
+        var savedViewMode = localStorage.getItem('viewMode');
+        var shouldBeMobile = savedViewMode
+            ? savedViewMode === 'mobile'
+            : (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth <= 768);
+        if(shouldBeMobile){
             document.body.classList.add('force-mobile');
             var btn = document.getElementById('view-toggle-btn');
             if(btn){ btn.textContent='📱'; btn.title='Bytt til PC-visning'; }
