@@ -5420,53 +5420,10 @@
 
     function initAuth(){
         auth = firebase.auth();
-
-        var wasAwaitingRedirect = sessionStorage.getItem('awaitingGoogleRedirect') === '1';
-        debugLog('initAuth kjører. wasAwaitingRedirect=' + wasAwaitingRedirect + ' currentUser=' + (auth.currentUser ? auth.currentUser.email : 'null'));
-        if(wasAwaitingRedirect){
-            // Vis lasteanimasjon med en gang siden vi trolig nettopp kom tilbake fra Google
-            var btn0 = document.getElementById('google-signin-btn');
-            var loading0 = document.getElementById('lock-loading');
-            if(btn0) btn0.style.display = 'none';
-            if(loading0) loading0.style.display = 'block';
-
-            // Sikkerhetsnett: hvis ingenting har skjedd etter 8 sekunder, vis feilmelding
-            // i stedet for at siden bare blir stående og laste for alltid.
-            setTimeout(function(){
-                if(sessionStorage.getItem('awaitingGoogleRedirect') === '1'){
-                    debugLog('⏱️ Timeout etter 8s — ingen redirect-resultat eller auth-state mottatt.');
-                    sessionStorage.removeItem('awaitingGoogleRedirect');
-                    var btn = document.getElementById('google-signin-btn');
-                    var loading = document.getElementById('lock-loading');
-                    var errEl = document.getElementById('lock-error');
-                    if(btn) btn.style.display = 'flex';
-                    if(loading) loading.style.display = 'none';
-                    if(errEl){
-                        errEl.style.display = 'block';
-                        errEl.textContent = '❌ Innlogging fullførte ikke. Prøv igjen, eller bruk en annen nettleser (Chrome anbefales på iPhone hvis Safari ikke fungerer).';
-                    }
-                }
-            }, 8000);
-        }
-
-        // Fanger opp resultatet fra signInWithRedirect når siden laster på nytt.
-        auth.getRedirectResult().then(function(result){
-            debugLog('getRedirectResult OK. user=' + (result && result.user ? result.user.email : 'ingen bruker i resultatet'));
-            sessionStorage.removeItem('awaitingGoogleRedirect');
-        }).catch(function(error){
-            debugLog('❌ getRedirectResult FEIL: ' + error.code + ' — ' + error.message);
-            sessionStorage.removeItem('awaitingGoogleRedirect');
-            var errEl = document.getElementById('lock-error');
-            var btn = document.getElementById('google-signin-btn');
-            var loading = document.getElementById('lock-loading');
-            if(btn) btn.style.display = 'flex';
-            if(loading) loading.style.display = 'none';
-            if(errEl){ errEl.style.display = 'block'; errEl.textContent = '❌ Innlogging mislyktes: ' + error.message; }
-        });
+        debugLog('initAuth kjører. currentUser=' + (auth.currentUser ? auth.currentUser.email : 'null'));
 
         auth.onAuthStateChanged(function(user){
             debugLog('onAuthStateChanged: ' + (user ? user.email : 'ingen bruker (utlogget)'));
-            sessionStorage.removeItem('awaitingGoogleRedirect');
             if(user){
                 currentUser = user;
                 // Registrer/hent bruker i databasen
@@ -5579,16 +5536,15 @@
         errEl.style.display = 'none';
 
         var provider = new firebase.auth.GoogleAuthProvider();
-        sessionStorage.setItem('awaitingGoogleRedirect', '1');
-        debugLog('Starter innlogging. UA: ' + navigator.userAgent.slice(0,60));
-        // Sett persistens eksplisitt for å unngå at redirect-flyten mister
-        // innloggingstilstanden i nettlesere med strenge personvern-innstillinger.
-        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(function(){
-            debugLog('Persistens satt. Kaller signInWithRedirect...');
-            return auth.signInWithRedirect(provider);
+        debugLog('Starter innlogging (popup). UA: ' + navigator.userAgent.slice(0,60));
+        // Redirect-flyten viste seg upålitelig på Safari/iOS pga. Intelligent Tracking
+        // Prevention, som blokkerer at innloggingstilstanden overlever hoppet mellom
+        // Google → Firebase sitt eget domene → tilbake til wikien. Popup fungerer i praksis
+        // selv om enkelte nettlesere logger en ufarlig Cross-Origin-Opener-Policy-advarsel.
+        auth.signInWithPopup(provider).then(function(result){
+            debugLog('✅ signInWithPopup OK. user=' + (result && result.user ? result.user.email : 'ukjent'));
         }).catch(function(error){
-            debugLog('❌ FEIL før redirect: ' + error.code + ' — ' + error.message);
-            sessionStorage.removeItem('awaitingGoogleRedirect');
+            debugLog('❌ signInWithPopup FEIL: ' + error.code + ' — ' + error.message);
             btn.style.display = 'flex';
             loading.style.display = 'none';
             errEl.style.display = 'block';
