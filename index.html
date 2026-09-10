@@ -624,7 +624,6 @@
         <div style="display:flex;border-bottom:1px solid #30363d;background:#0d1117;">
             <button onclick="adminTab('users')" id="admin-tab-users" style="padding:10px 18px;font-size:12px;border:none;border-bottom:2px solid #a371f7;background:transparent;color:#c9d1d9;cursor:pointer;font-family:Inter,sans-serif;">👑 Brukere</button>
             <button onclick="adminTab('prompts')" id="admin-tab-prompts" style="padding:10px 18px;font-size:12px;border:none;border-bottom:2px solid transparent;background:transparent;color:#8b949e;cursor:pointer;font-family:Inter,sans-serif;">✏️ Promptmaler</button>
-            <button onclick="adminTab('missingformulas')" id="admin-tab-missingformulas" style="padding:10px 18px;font-size:12px;border:none;border-bottom:2px solid transparent;background:transparent;color:#8b949e;cursor:pointer;font-family:Inter,sans-serif;">🔢 Manglende formler</button>
         </div>
         <!-- BRUKERE -->
         <div id="admin-section-users" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
@@ -657,16 +656,6 @@
             <div style="padding:12px 16px;border-top:1px solid #30363d;display:flex;gap:8px;">
                 <button onclick="savePromptTemplates()" style="background:#238636;border:1px solid #2ea043;color:#fff;border-radius:6px;padding:7px 18px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;flex:1;">💾 Lagre alle maler</button>
                 <button onclick="resetPromptTemplates()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">↺ Tilbakestill</button>
-            </div>
-        </div>
-        <!-- MANGLENDE FORMLER (GLOBAL OVERSIKT) -->
-        <div id="admin-section-missingformulas" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
-            <div style="padding:8px 12px;background:#0d1117;border-bottom:1px solid #30363d;font-size:11px;color:#8b949e;font-family:Inter,sans-serif;display:flex;justify-content:space-between;align-items:center;">
-                <span>Alle formler i wikien som mangler forklaring, gruppert per artikkel</span>
-                <button onclick="scanAllMissingFormulas()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif;">🔄 Skann på nytt</button>
-            </div>
-            <div id="admin-missing-formulas-list" style="padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px;font-family:Inter,sans-serif;">
-                <div style="color:#8b949e;font-size:13px;">Trykk "Skann på nytt" for å søke gjennom alle artikler.</div>
             </div>
         </div>
     </div>
@@ -829,6 +818,10 @@
                 <span style="font-size:16px;">💽</span>
                 <div style="text-align:left;"><div style="font-weight:700;">Lagringsplass</div><div style="font-size:11px;opacity:0.75;font-weight:400;">Se hva som tar mest plass</div></div>
             </button>
+            <button class="btn btn-outline" onclick="openMissingFormulasScanner()" style="justify-content:flex-start;gap:12px;">
+                <span style="font-size:16px;">🔢</span>
+                <div style="text-align:left;"><div style="font-weight:700;">Manglende formler</div><div style="font-size:11px;opacity:0.75;font-weight:400;">Finn formler uten forklaring i hele wikien</div></div>
+            </button>
         </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;">
@@ -880,6 +873,35 @@
         <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Dokumenter med <strong>identisk tittel</strong> er gruppert nedenfor. Klikk på et dokument for å åpne det, eller slett kopier du ikke trenger.</p>
         <div id="dup-results" style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;"></div>
         <button class="btn btn-outline" style="width:100%; justify-content:center; margin-top:16px;" onclick="closeDupModal()">Lukk</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="missing-formulas-modal" onclick="closeMissingFormulasScanner()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:640px; max-height:80vh; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h2 style="margin:0;">🔢 Manglende formler</h2>
+            <button class="icon-btn" onclick="closeMissingFormulasScanner()">✕</button>
+        </div>
+        <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">Formler i wikien som mangler forklaring, gruppert per artikkel.</p>
+
+        <div style="padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Velg mapper å søke i</span>
+                <div style="display:flex;gap:6px;">
+                    <button onclick="mfSelectAllFolders(true)" class="btn btn-outline" style="padding:3px 9px;font-size:11px;">Velg alle</button>
+                    <button onclick="mfSelectAllFolders(false)" class="btn btn-outline" style="padding:3px 9px;font-size:11px;">Fjern alle</button>
+                </div>
+            </div>
+            <div id="mf-folder-list" style="display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto;"></div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+            <button onclick="scanAllMissingFormulas()" class="btn btn-outline" style="font-size:12px;">🔄 Skann på nytt</button>
+        </div>
+
+        <div id="missing-formulas-list" style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:14px;">
+            <div style="color:var(--text-muted);font-size:13px;">Trykk "Skann på nytt" for å søke gjennom valgte mapper.</div>
+        </div>
     </div>
 </div>
 
@@ -5748,28 +5770,91 @@
     function adminTab(tab){
         document.getElementById('admin-section-users').style.display   = tab==='users'   ? 'flex' : 'none';
         document.getElementById('admin-section-prompts').style.display = tab==='prompts' ? 'flex' : 'none';
-        document.getElementById('admin-section-missingformulas').style.display = tab==='missingformulas' ? 'flex' : 'none';
         document.getElementById('admin-tab-users').style.borderBottomColor   = tab==='users'   ? '#a371f7' : 'transparent';
         document.getElementById('admin-tab-users').style.color               = tab==='users'   ? '#c9d1d9' : '#8b949e';
         document.getElementById('admin-tab-prompts').style.borderBottomColor = tab==='prompts' ? '#a371f7' : 'transparent';
         document.getElementById('admin-tab-prompts').style.color             = tab==='prompts' ? '#c9d1d9' : '#8b949e';
-        document.getElementById('admin-tab-missingformulas').style.borderBottomColor = tab==='missingformulas' ? '#a371f7' : 'transparent';
-        document.getElementById('admin-tab-missingformulas').style.color             = tab==='missingformulas' ? '#c9d1d9' : '#8b949e';
         if(tab==='prompts'){
             document.getElementById('admin-prompt-article').value = promptTemplates.article;
             document.getElementById('admin-prompt-formula').value = promptTemplates.formula;
             document.getElementById('admin-prompt-word').value    = promptTemplates.word;
         }
-        if(tab==='missingformulas'){
-            scanAllMissingFormulas();
+    }
+
+    function openMissingFormulasScanner(){
+        document.getElementById('missing-formulas-modal').style.display = 'flex';
+        renderMfFolderPicker();
+        scanAllMissingFormulas();
+    }
+
+    function closeMissingFormulasScanner(){
+        document.getElementById('missing-formulas-modal').style.display = 'none';
+    }
+
+    var mfSelectedFolders = null; // null = ikke initialisert ennå, Set av mappe-id-er ellers
+
+    function renderMfFolderPicker(){
+        var listEl = document.getElementById('mf-folder-list');
+        var topFolders = (db.children || []).filter(function(c){ return c.type === 'folder'; });
+
+        if(mfSelectedFolders === null){
+            // Standard: alle mapper valgt første gang panelet åpnes
+            mfSelectedFolders = {};
+            topFolders.forEach(function(f){ mfSelectedFolders[f.id] = true; });
+        }
+
+        listEl.innerHTML = '';
+        topFolders.forEach(function(folder){
+            var row = document.createElement('label');
+            row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;color:#c9d1d9;cursor:pointer;padding:3px 4px;';
+            var cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = !!mfSelectedFolders[folder.id];
+            cb.onchange = function(){
+                if(cb.checked) mfSelectedFolders[folder.id] = true;
+                else delete mfSelectedFolders[folder.id];
+            };
+            var span = document.createElement('span');
+            span.textContent = '📁 ' + folder.name;
+            row.appendChild(cb);
+            row.appendChild(span);
+            listEl.appendChild(row);
+        });
+
+        if(topFolders.length === 0){
+            listEl.innerHTML = '<div style="color:#8b949e;font-size:12px;">Ingen mapper funnet.</div>';
         }
     }
 
+    function mfSelectAllFolders(select){
+        var topFolders = (db.children || []).filter(function(c){ return c.type === 'folder'; });
+        mfSelectedFolders = {};
+        if(select) topFolders.forEach(function(f){ mfSelectedFolders[f.id] = true; });
+        renderMfFolderPicker();
+    }
+
     function scanAllMissingFormulas(){
-        var listEl = document.getElementById('admin-missing-formulas-list');
+        var listEl = document.getElementById('missing-formulas-list');
         listEl.innerHTML = '<div style="color:#8b949e;font-size:13px;">Skanner...</div>';
 
-        var files = getAllFiles(db);
+        // Bygg filliste kun fra de valgte toppmappene (rekursivt), pluss løse filer på rotnivå
+        var files = [];
+        var topFolders = (db.children || []).filter(function(c){ return c.type === 'folder'; });
+        var hasAnySelected = topFolders.some(function(f){ return mfSelectedFolders && mfSelectedFolders[f.id]; });
+
+        if(!mfSelectedFolders || !hasAnySelected){
+            listEl.innerHTML = '<div style="color:#8b949e;font-size:13px;">Ingen mapper valgt. Velg minst én mappe ovenfor.</div>';
+            return;
+        }
+
+        (db.children || []).forEach(function(node){
+            if(node.type === 'file'){
+                files.push(node); // Løse filer på rotnivå tas alltid med
+            } else if(node.type === 'folder' && mfSelectedFolders[node.id]){
+                getAllFiles(node, files);
+            }
+        });
+
         var byArticle = []; // [{ file, formulas: [{latex,key}] }]
 
         files.forEach(function(file){
@@ -5822,7 +5907,7 @@
             goBtn.style.cssText = 'background:transparent;border:1px solid #30363d;color:#58a6ff;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;';
             goBtn.onclick = (function(fileId){
                 return function(){
-                    closeAdminPanel();
+                    closeMissingFormulasScanner();
                     navigateToId(fileId);
                 };
             })(entry.file.id);
