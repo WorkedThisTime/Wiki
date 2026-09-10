@@ -624,6 +624,7 @@
         <div style="display:flex;border-bottom:1px solid #30363d;background:#0d1117;">
             <button onclick="adminTab('users')" id="admin-tab-users" style="padding:10px 18px;font-size:12px;border:none;border-bottom:2px solid #a371f7;background:transparent;color:#c9d1d9;cursor:pointer;font-family:Inter,sans-serif;">👑 Brukere</button>
             <button onclick="adminTab('prompts')" id="admin-tab-prompts" style="padding:10px 18px;font-size:12px;border:none;border-bottom:2px solid transparent;background:transparent;color:#8b949e;cursor:pointer;font-family:Inter,sans-serif;">✏️ Promptmaler</button>
+            <button onclick="adminTab('missingformulas')" id="admin-tab-missingformulas" style="padding:10px 18px;font-size:12px;border:none;border-bottom:2px solid transparent;background:transparent;color:#8b949e;cursor:pointer;font-family:Inter,sans-serif;">🔢 Manglende formler</button>
         </div>
         <!-- BRUKERE -->
         <div id="admin-section-users" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
@@ -656,6 +657,16 @@
             <div style="padding:12px 16px;border-top:1px solid #30363d;display:flex;gap:8px;">
                 <button onclick="savePromptTemplates()" style="background:#238636;border:1px solid #2ea043;color:#fff;border-radius:6px;padding:7px 18px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;flex:1;">💾 Lagre alle maler</button>
                 <button onclick="resetPromptTemplates()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">↺ Tilbakestill</button>
+            </div>
+        </div>
+        <!-- MANGLENDE FORMLER (GLOBAL OVERSIKT) -->
+        <div id="admin-section-missingformulas" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+            <div style="padding:8px 12px;background:#0d1117;border-bottom:1px solid #30363d;font-size:11px;color:#8b949e;font-family:Inter,sans-serif;display:flex;justify-content:space-between;align-items:center;">
+                <span>Alle formler i wikien som mangler forklaring, gruppert per artikkel</span>
+                <button onclick="scanAllMissingFormulas()" style="background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif;">🔄 Skann på nytt</button>
+            </div>
+            <div id="admin-missing-formulas-list" style="padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px;font-family:Inter,sans-serif;">
+                <div style="color:#8b949e;font-size:13px;">Trykk "Skann på nytt" for å søke gjennom alle artikler.</div>
             </div>
         </div>
     </div>
@@ -5737,15 +5748,102 @@
     function adminTab(tab){
         document.getElementById('admin-section-users').style.display   = tab==='users'   ? 'flex' : 'none';
         document.getElementById('admin-section-prompts').style.display = tab==='prompts' ? 'flex' : 'none';
+        document.getElementById('admin-section-missingformulas').style.display = tab==='missingformulas' ? 'flex' : 'none';
         document.getElementById('admin-tab-users').style.borderBottomColor   = tab==='users'   ? '#a371f7' : 'transparent';
         document.getElementById('admin-tab-users').style.color               = tab==='users'   ? '#c9d1d9' : '#8b949e';
         document.getElementById('admin-tab-prompts').style.borderBottomColor = tab==='prompts' ? '#a371f7' : 'transparent';
         document.getElementById('admin-tab-prompts').style.color             = tab==='prompts' ? '#c9d1d9' : '#8b949e';
+        document.getElementById('admin-tab-missingformulas').style.borderBottomColor = tab==='missingformulas' ? '#a371f7' : 'transparent';
+        document.getElementById('admin-tab-missingformulas').style.color             = tab==='missingformulas' ? '#c9d1d9' : '#8b949e';
         if(tab==='prompts'){
             document.getElementById('admin-prompt-article').value = promptTemplates.article;
             document.getElementById('admin-prompt-formula').value = promptTemplates.formula;
             document.getElementById('admin-prompt-word').value    = promptTemplates.word;
         }
+        if(tab==='missingformulas'){
+            scanAllMissingFormulas();
+        }
+    }
+
+    function scanAllMissingFormulas(){
+        var listEl = document.getElementById('admin-missing-formulas-list');
+        listEl.innerHTML = '<div style="color:#8b949e;font-size:13px;">Skanner...</div>';
+
+        var files = getAllFiles(db);
+        var byArticle = []; // [{ file, formulas: [{latex,key}] }]
+
+        files.forEach(function(file){
+            var text = (file.content || '') + '\n' + (file.content2 || '');
+            var found = {};
+            var seenInFile = {};
+
+            // Finn $$...$$ og $...$ (unngår å matche $ i kodeblokker er ikke nødvendig her siden vi kun trenger å oppdage kandidater)
+            var regex = /\$\$([\s\S]+?)\$\$|\$([^\$\n]+?)\$/g;
+            var m;
+            while((m = regex.exec(text)) !== null){
+                var raw = (m[1] !== undefined ? m[1] : m[2]).trim();
+                if(!raw) continue;
+                if(isPlainQuantity(raw)) continue;
+                var key = latexKey(raw);
+                if(excludedFormulas[key]) continue;
+                if(formulaDict[key]) continue;
+                if(seenInFile[key]) continue;
+                seenInFile[key] = true;
+                found[key] = raw;
+            }
+
+            var formulasList = Object.keys(found).map(function(k){ return { latex: found[k], key: k }; });
+            if(formulasList.length > 0){
+                byArticle.push({ file: file, formulas: formulasList });
+            }
+        });
+
+        if(byArticle.length === 0){
+            listEl.innerHTML = '<div style="color:#3fb950;font-size:13px;">✅ Alle formler i wikien har forklaring!</div>';
+            return;
+        }
+
+        listEl.innerHTML = '';
+        var totalCount = byArticle.reduce(function(sum,a){ return sum + a.formulas.length; }, 0);
+        var summary = document.createElement('div');
+        summary.style.cssText = 'color:#f0883e;font-size:12px;font-weight:600;';
+        summary.textContent = '⚠️ ' + totalCount + ' formel(er) uten forklaring i ' + byArticle.length + ' artikkel(er)';
+        listEl.appendChild(summary);
+
+        byArticle.forEach(function(entry){
+            var card = document.createElement('div');
+            card.style.cssText = 'background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;';
+
+            var header = document.createElement('div');
+            header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+            header.innerHTML = '<span style="font-weight:600;color:#c9d1d9;font-size:13px;">📄 ' + sanitizeHTML(entry.file.name) + '</span>';
+            var goBtn = document.createElement('button');
+            goBtn.textContent = 'Gå til artikkel →';
+            goBtn.style.cssText = 'background:transparent;border:1px solid #30363d;color:#58a6ff;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;';
+            goBtn.onclick = (function(fileId){
+                return function(){
+                    closeAdminPanel();
+                    navigateToId(fileId);
+                };
+            })(entry.file.id);
+            header.appendChild(goBtn);
+            card.appendChild(header);
+
+            var rowsWrap = document.createElement('div');
+            rowsWrap.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+            entry.formulas.forEach(function(f){
+                var row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;gap:8px;background:#161b22;border-radius:6px;padding:6px 8px;';
+                var latexSpan = document.createElement('span');
+                latexSpan.style.cssText = 'flex:1;font-size:12px;color:#c9d1d9;overflow-x:auto;';
+                try{ katex.render(f.latex, latexSpan, {throwOnError:false, displayMode:false}); }
+                catch(e){ latexSpan.textContent = f.latex; }
+                row.appendChild(latexSpan);
+                rowsWrap.appendChild(row);
+            });
+            card.appendChild(rowsWrap);
+            listEl.appendChild(card);
+        });
     }
 
     function openAdminPanel(){
